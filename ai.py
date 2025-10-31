@@ -152,7 +152,7 @@ def generate_ai_response(prompt):
 
     except HTTPError as e:
         # HTTP 4xx, 5xx hataları (örn: 400 Bad Request, 403 Forbidden, 429 Rate Limit, 500 Internal Server Error)
-        return f"Hey! Dış dünyadan bilgi çekerken API'de bir sorun çıktı (HTTP Hata Kodu: {e.response.status_code}). Sanırım AI anahtarı (API Key) eksik veya geçersiz olabilir. Şimdilik basit sohbet edelim mi?"
+        return f"Hey! Dış dünyadan bilgi çekerken API'de bir sorun çıktı (HTTP Hata Kodu: {e.response.status_code}). Sanırım AI anahtarı (API Key) eksik veya geçersiz olabilir. Şimdilik sadece basit sohbet edelim mi?"
     except ConnectionError:
         # Ağ bağlantısı hataları
         return "İnternetim çekmiyor galiba! Şu an Google'a bağlanıp detaylı bilgi alamıyorum. Lütfen ağ bağlantınızı kontrol edin. Basit sohbet edelim, olur mu?"
