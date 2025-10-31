@@ -1,19 +1,17 @@
 import streamlit as st
+# pyrebase4'ü içe aktarıyoruz, ancak kodda pyrebase adıyla kullanmak için 'as pyrebase' ekledik.
+import pyrebase4 as pyrebase 
 import time
 import random
+import requests # API çağrısı için requests kullanıyoruz.
 import json
-import requests # Yeni: urllib yerine daha stabil requests kullanılıyor.
-import pyrebase
+from requests.exceptions import HTTPError, ConnectionError, Timeout
 
 # =========================================================================
-# SABİT TANIMLAMALAR
+# FIREBASE KONFİGÜRASYONU VE BAĞLANTI İŞLEMLERİ
 # =========================================================================
 
-# API Key'i buraya ekleyebilirsiniz (Streamlit Cloud'da Secrets kullanılması önerilir)
-# Şimdilik Firebase konfigürasyonunuzdan farklı bir API Key kullanın.
-GEMINI_API_KEY = "YAPAY_ZEKA_API_KEY_BURAYA" # Lütfen burayı kendi anahtarınızla doldurun!
-
-# Firebase Konfigürasyonunuz (GitHub'a yüklediğiniz konfigürasyon)
+# KULLANICI TARAFINDAN SAĞLANAN GÜNCEL KONFİGÜRASYON KULLANILIYOR
 FIREBASE_CONFIG = {
     "apiKey": "AIzaSyBmtvU_ceKdSXf-jVmrUPYeH1L9pDw5vdc",
     "authDomain": "digit-ai-lab.firebaseapp.com",
@@ -23,7 +21,18 @@ FIREBASE_CONFIG = {
     "appId": "1:138611942359:web:086e3d048326a24a412191",
     "databaseURL": "https://digit-ai-lab-default-rtdb.firebaseio.com" 
 }
+
+# Gemini API bağlantı detayları
+# ÖNEMLİ: API Key, Streamlit Secrets üzerinden veya doğrudan buraya girilmelidir. 
+# Geçerli bir anahtar olmadan AI yanıtları çalışmayacaktır.
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "") # Streamlit Secrets'tan çekmeyi deneyin
+if not GEMINI_API_KEY:
+    # Secrets'ta yoksa, güvenlik için boş bırakılır.
+    GEMINI_API_KEY = "" 
+    
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent"
+
+# Sizin AI'nızın karakterini tanımlayan sistem talimatı
 SYSTEM_INSTRUCTION = """
 Sen, kullanıcının web sitesindeki resmi AI asistanısın. Görevin, her zaman arkadaş canlısı, samimi ve doğal bir tonda yanıt vermek. 
 Robotik dilden kaçın ve sanki bir dostunmuş gibi konuş.
@@ -31,30 +40,34 @@ Kullanıcının sorduğu detaylı sorulara (tarih, bilim, güncel olaylar vb.) c
 Yanıtlarını daima Türkçe ver ve Türk kültürüne uygun, sıcak ifadeler kullan.
 """
 
-TRIAL_DURATION = 120 
-
-# =========================================================================
-# FIREBASE VE KULLANICI BAĞLANTISI
-# =========================================================================
-
+# --- Firebase Bağlantı Bloğu ---
 try:
+    # Firebase'i pyrebase4 ile başlat
     firebase = pyrebase.initialize_app(FIREBASE_CONFIG)
     auth = firebase.auth()
     db = firebase.database()
     st.session_state['firebase_connected'] = True
 except Exception as e:
-    # Hata durumunda, Auth işlemlerini pasifize eden dummy bir sınıf tanımlanır.
+    # Streamlit Cloud'da bağlantı hatalarını göster
+    st.error(f"❌ Firebase bağlantı hatası: Konfigürasyonunuzu kontrol edin. Hata: {e}")
     st.session_state['firebase_connected'] = False
+    
     class DummyAuth:
+        """Firebase'e bağlanılamadığında sahte Auth metotları sağlar."""
         def create_user_with_email_and_password(self, email, password): 
             raise Exception("Auth Error: Bağlantı Başarısız")
         def sign_in_with_email_and_password(self, email, password): 
             raise Exception("Auth Error: Bağlantı Başarısız")
+        def current_user(self):
+            return None
+    
     auth = DummyAuth()
+    
+# =========================================================================
+# DURUM YÖNETİMİ VE SABİTLER
+# =========================================================================
 
-# =========================================================================
-# STREAMLIT DURUM YÖNETİMİ
-# =========================================================================
+TRIAL_DURATION = 120 # Deneme süresi (saniye)
 
 if 'is_loaded' not in st.session_state:
     st.session_state.is_loaded = False
@@ -63,9 +76,11 @@ if 'user_info' not in st.session_state:
 if 'trial_end_time' not in st.session_state:
     st.session_state.trial_end_time = time.time() + TRIAL_DURATION 
 if 'messages' not in st.session_state:
+    # Her yeni oturumda AI'ın ilk mesajı
     st.session_state.messages = [{"role": "assistant", "content": "Selamlar! Ben senin AI arkadaşınım. Nasılsın bakalım? Aklına takılan her şeyi bana sorabilirsin."}]
 if 'message_count' not in st.session_state:
     st.session_state.message_count = 0
+
 
 # =========================================================================
 # YAPAY ZEKA MANTIĞI VE SOHBET YANITLARI (GEMINI API İLE)
@@ -79,20 +94,23 @@ def format_sources(sources):
     source_list = "\n\n**Kaynaklar:**\n"
     for i, source in enumerate(sources):
         if source.get('uri') and source.get('title'):
+            # Güvenlik ve temizlik için başlığı kısaltabiliriz
             title = source['title'][:100] + ('...' if len(source['title']) > 100 else '')
-            source_list += f"{i+1}. [{title}]({source['uri']})\n"
+            # URL'i temizleyip Markdown linki olarak döndür
+            source_list += f"{i+1}. [{title}]({source['uri'].replace(' ', '%20')})\n"
     return source_list
 
 def generate_ai_response(prompt):
     """
-    Google Search grounding kullanarak yapay zeka yanıtı üretir (API çağrısı).
-    Hata düzeltmeleri ve stabilite için requests kütüphanesi kullanılır.
+    Google Search grounding kullanarak gerçek yapay zeka yanıtı üretir (API çağrısı).
+    requests kütüphanesi ve gelişmiş hata yönetimi kullanır.
     """
-    if GEMINI_API_KEY == "YAPAY_ZEKA_API_KEY_BURAYA" or not GEMINI_API_KEY:
-        return "Hey! API anahtarını 'ai.py' dosyasına eklemeyi unuttun sanırım. Lütfen kodu düzenle ve anahtarı gir. Şimdilik basit sohbet edebiliriz."
+    
+    if not GEMINI_API_KEY:
+        return "Hey! AI Anahtarı (API Key) eksik olduğu için Google'a bağlanamıyorum. Şimdilik sadece basit, önceden tanımlanmış yanıtlar verebilirim."
         
     chat_history = []
-    # Sohbet geçmişini API için hazırlar (Kaynakları ayırarak)
+    # Sohbet geçmişini API için hazırlar. Kaynakları mesajlardan ayırır.
     for message in st.session_state.messages:
         content = message["content"].split("\n\n**Kaynaklar:**")[0] 
         role = "model" if message["role"] == "assistant" else message["role"] 
@@ -103,7 +121,7 @@ def generate_ai_response(prompt):
 
     payload = {
         "contents": contents_for_api, 
-        "tools": [{"google_search": {} }], 
+        "tools": [{"google_search": {} }], # Arama yapma yeteneğini etkinleştir
         "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]}
     }
 
@@ -111,8 +129,8 @@ def generate_ai_response(prompt):
     headers = {'Content-Type': 'application/json'}
 
     try:
-        # requests ile POST isteği gönderme (Streamlit Cloud'da daha stabildir)
-        response = requests.post(url, data=json.dumps(payload), headers=headers, timeout=15)
+        # requests ile POST isteği oluşturma
+        response = requests.post(url, headers=headers, json=payload, timeout=15)
         response.raise_for_status() # HTTP hatalarını yakalamak için
 
         result = response.json()
@@ -129,15 +147,20 @@ def generate_ai_response(prompt):
                 for attr in grounding_metadata['groundingAttributions']
             ]
         
+        # Yanıtı ve kaynakları birleştirip döndür
         return text + format_sources(sources)
 
-    except requests.exceptions.HTTPError as e:
-        st.error(f"AI API HTTP Hatası: Sunucu kodu {e.response.status_code}. API Key boş veya geçersiz olabilir.")
-        return "Hey! Dış dünyadan bilgi çekerken API'de bir sorun çıktı. Sanırım AI anahtarı (API Key) eksik veya yanlış olabilir. Şimdilik basit sohbet edelim mi?"
-    except requests.exceptions.ConnectionError as e:
-        st.error(f"AI API Bağlantı Hatası: Ağ erişim sorunu. Hata: {e}")
-        return "İnternetim çekmiyor galiba! Şu an Google'a bağlanıp detaylı bilgi alamıyorum. Basit sohbet edelim, olur mu?"
+    except HTTPError as e:
+        # HTTP 4xx, 5xx hataları (örn: 400 Bad Request, 403 Forbidden, 429 Rate Limit, 500 Internal Server Error)
+        return f"Hey! Dış dünyadan bilgi çekerken API'de bir sorun çıktı (HTTP Hata Kodu: {e.response.status_code}). Sanırım AI anahtarı (API Key) eksik veya geçersiz olabilir. Şimdilik basit sohbet edelim mi?"
+    except ConnectionError:
+        # Ağ bağlantısı hataları
+        return "İnternetim çekmiyor galiba! Şu an Google'a bağlanıp detaylı bilgi alamıyorum. Lütfen ağ bağlantınızı kontrol edin. Basit sohbet edelim, olur mu?"
+    except Timeout:
+        # Zaman aşımı hatası
+        return "AI çok düşündü ama yanıtı zamanında yetiştiremedi. Lütfen tekrar deneyin."
     except Exception as e:
+        # Genel iç hatalar (JSON parse etme, vs.)
         st.error(f"AI İç Hata: {e}")
         return "Bende beklenmedik bir hata oluştu! Bir mühendis çağırmam gerekebilir. Kusura bakma."
 
@@ -154,11 +177,11 @@ def display_splash_screen():
         
         try:
             for percent_complete in range(1, 11): 
-                time.sleep(0.1) # Daha hızlı yükleme
+                time.sleep(0.15)
                 st.progress(percent_complete * 10, text=f"Modül yükleniyor: {percent_complete * 10}%")
 
             st.success("Yükleme Tamamlandı! Uygulama Başlatılıyor...")
-            time.sleep(0.5) # Daha kısa bekleme süresi
+            time.sleep(1) 
 
             st.session_state.is_loaded = True
             st.rerun() 
@@ -167,40 +190,43 @@ def display_splash_screen():
             st.error(f"Model veya Kütüphane Yükleme Hatası: {e}")
 
 
-def handle_chat_input(user_prompt):
+def handle_chat_input():
     """Kullanıcı mesajını işler ve sohbete ekler."""
+    user_prompt = st.session_state.prompt
     if user_prompt:
-        # Kullanıcı mesajını ekle
+        # 1. Kullanıcı mesajını ekle
         st.session_state.messages.append({"role": "user", "content": user_prompt})
         
-        # Yanıtı üretmek için bekleme animasyonu
+        # 2. Yanıtı üretmek için bekleme animasyonu
+        # Yeni bir anahtar kullan (spinner_key) ve eski mesajları temizleme
         with st.spinner("🤖 Bir saniye, yanıtınızı arkadaşça bir dille hazırlıyorum..."):
             # Gerçek API çağrısı
             ai_response = generate_ai_response(user_prompt)
-            # Düşünme süresi eklenir
-            time.sleep(random.uniform(1.0, 2.0)) 
+            # Düşünme süresi eklenir, böylece yapay zekanın yanıtı hemen gelmez
+            time.sleep(random.uniform(1.0, 2.5)) 
 
-        # Cevabı sohbete ekle
+        # 3. Cevabı sohbete ekle
         st.session_state.messages.append({"role": "assistant", "content": ai_response})
         st.session_state.message_count += 1
         
-        # Arayüzü yenile
+        # 4. Giriş alanını temizle ve arayüzü yenile
+        st.session_state.prompt = ""
         st.rerun()
 
 def draw_chat_interface():
     """Sohbet geçmişini ve giriş alanını çizer."""
     
+    # Sohbet geçmişini göstermek için bir konteyner kullanıyoruz.
+    # Bu, 'removeChild' hatalarını önlemede yardımcı olur.
     chat_container = st.container(height=450, border=True)
     with chat_container:
         for message in st.session_state.messages:
             with st.chat_message(message["role"]):
                 st.markdown(message["content"])
 
-    # Hata düzeltmesi: Girişi doğrudan alıp handle_chat_input'a yönlendiriyoruz.
+    # Sohbet girişini aşağıda çiz
     if is_trial_active() or st.session_state.user_info:
-        user_prompt = st.chat_input("Buraya mesajınızı arkadaşınıza yazar gibi yazın...")
-        if user_prompt:
-            handle_chat_input(user_prompt)
+        st.chat_input("Buraya mesajınızı arkadaşınıza yazar gibi yazın...", key="prompt", on_submit=handle_chat_input)
     else:
         st.info("Ücretsiz deneme süreniz doldu. Devam etmek için lütfen Kayıt Olun/Giriş Yapın.")
 
@@ -258,7 +284,7 @@ def register_user(email, password):
             st.rerun()
         except Exception as e:
             st.error(f"Kayıt Hatası: {e}")
-            st.error("Lütfen: 1) E-posta/Şifre biçimini kontrol edin. 2) Firebase konsolunda **Authentication (Kimlik Doğrulama)** ayarlarını açtığınızdan emin olun (CONFIGURATION_NOT_FOUND hatası buradan gelir).")
+            st.error("Lütfen: 1) E-posta/Şifre biçimini kontrol edin. 2) Firebase konsolunda **Authentication (Kimlik Doğrulama)** ayarlarını açtığınızdan emin olun.")
     else:
         st.error("Firebase'e bağlanılamadığı için kayıt yapılamıyor.")
 
@@ -278,6 +304,7 @@ def login_user(email, password):
 def logout():
     """Çıkış işlemini gerçekleştirir."""
     st.session_state.user_info = None
+    # Çıkış yapıldığında sohbeti sıfırla
     st.session_state.messages = [{"role": "assistant", "content": "Görüşmek üzere! Yeni bir oturum başlattın. Nasılsın?"}]
     st.session_state.trial_end_time = time.time() + TRIAL_DURATION 
     st.success("Başarıyla çıkış yaptınız.")
@@ -302,10 +329,6 @@ def run_app():
     
     if st.session_state.user_info or is_trial_active():
         st.subheader("💬 AI Sohbet Alanı (Gizliliğin Ön Planda)")
-        # Kullanıcıyı API key'i girmesi konusunda uyarma
-        if GEMINI_API_KEY == "YAPAY_ZEKA_API_KEY_BURAYA" or not GEMINI_API_KEY:
-             st.warning("⚠️ ÖNEMLİ: Detaylı arama yapması için `ai.py` dosyasındaki `GEMINI_API_KEY` değişkenini gerçek anahtarınızla doldurmanız gerekiyor!")
-
         st.info("Unutma: Sohbet geçmişin bu oturumda kalıyor. Rahatça konuşabilirsin!")
         draw_chat_interface()
     else:
@@ -314,5 +337,4 @@ def run_app():
 
 
 if __name__ == '__main__':
-    # requests kütüphanesinin requirements.txt'ye eklenmesi gerekiyor.
     run_app()
