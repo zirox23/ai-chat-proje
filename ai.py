@@ -1,12 +1,17 @@
 import streamlit as st
-# pyrebase4'ü içe aktarıyoruz, ancak kodda pyrebase adıyla kullanmak için 'as pyrebase' ekledik.
-# requirements.txt dosyasına 'pyrebase4' eklenmelidir.
+# ÖNEMLİ DÜZELTME: pyrebase4 paketini pyrebase adıyla kullanmak için bu şekilde içe aktarın.
+# requirements.txt dosyasında 'pyrebase4' olmalıdır.
 import pyrebase4 as pyrebase 
 import time
 import random
 import requests # API çağrısı için requests kullanıyoruz.
 import json
 from requests.exceptions import HTTPError, ConnectionError, Timeout
+
+# Uygulama Versiyonu (Streamlit'i önbellek temizlemeye zorlamak için bir belirteç)
+APP_VERSION = "1.0.1-pyrebase-fix" 
+st.sidebar.markdown(f"**Uygulama Versiyonu:** {APP_VERSION}")
+
 
 # =========================================================================
 # FIREBASE KONFİGÜRASYONU VE BAĞLANTI İŞLEMLERİ
@@ -25,10 +30,8 @@ FIREBASE_CONFIG = {
 
 # Gemini API bağlantı detayları
 # ÖNEMLİ: API Key, Streamlit Secrets üzerinden veya doğrudan buraya girilmelidir. 
-# Geçerli bir anahtar olmadan AI yanıtları çalışmayacaktır.
-GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "") # Streamlit Secrets'tan çekmeyi deneyin
+GEMINI_API_KEY = st.secrets.get("GEMINI_API_KEY", "") 
 if not GEMINI_API_KEY:
-    # Secrets'ta yoksa, güvenlik için boş bırakılır.
     GEMINI_API_KEY = "" 
     
 GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent"
@@ -49,7 +52,6 @@ try:
     db = firebase.database()
     st.session_state['firebase_connected'] = True
 except Exception as e:
-    # Streamlit Cloud'da bağlantı hatalarını göster
     st.error(f"❌ Firebase bağlantı hatası: Konfigürasyonunuzu kontrol edin. Hata: {e}")
     st.session_state['firebase_connected'] = False
     
@@ -153,7 +155,7 @@ def generate_ai_response(prompt):
 
     except HTTPError as e:
         # HTTP 4xx, 5xx hataları (örn: 400 Bad Request, 403 Forbidden, 429 Rate Limit, 500 Internal Server Error)
-        return f"Hey! Dış dünyadan bilgi çekerken API'de bir sorun çıktı (HTTP Hata Kodu: {e.response.status_code}). Sanırım AI anahtarı (API Key) eksik veya geçersiz olabilir. Şimdilik sadece basit sohbet edelim mi?"
+        return f"Hey! Dış dünyadan bilgi çekerken API'de bir sorun çıktı (HTTP Hata Kodu: {e.response.status_code}). Sanırım AI anahtarı (API Key) eksik veya geçersiz olabilir. Şimdilik sadece basit, önceden tanımlanmış yanıtlar verebilirim."
     except ConnectionError:
         # Ağ bağlantısı hataları
         return "İnternetim çekmiyor galiba! Şu an Google'a bağlanıp detaylı bilgi alamıyorum. Lütfen ağ bağlantınızı kontrol edin. Basit sohbet edelim, olur mu?"
@@ -199,11 +201,9 @@ def handle_chat_input():
         st.session_state.messages.append({"role": "user", "content": user_prompt})
         
         # 2. Yanıtı üretmek için bekleme animasyonu
-        # Yeni bir anahtar kullan (spinner_key) ve eski mesajları temizleme
         with st.spinner("🤖 Bir saniye, yanıtınızı arkadaşça bir dille hazırlıyorum..."):
             # Gerçek API çağrısı
             ai_response = generate_ai_response(user_prompt)
-            # Düşünme süresi eklenir, böylece yapay zekanın yanıtı hemen gelmez
             time.sleep(random.uniform(1.0, 2.5)) 
 
         # 3. Cevabı sohbete ekle
@@ -217,8 +217,6 @@ def handle_chat_input():
 def draw_chat_interface():
     """Sohbet geçmişini ve giriş alanını çizer."""
     
-    # Sohbet geçmişini göstermek için bir konteyner kullanıyoruz.
-    # Bu, 'removeChild' hatalarını önlemede yardımcı olur.
     chat_container = st.container(height=450, border=True)
     with chat_container:
         for message in st.session_state.messages:
@@ -279,7 +277,6 @@ def register_user(email, password):
     """Kullanıcı kayıt işlemini gerçekleştirir."""
     if st.session_state.firebase_connected:
         try:
-            # Firebase Auth'un e-posta/şifre formatı kontrolünü atlamadan önce basit bir kontrol
             if not email or len(password) < 6:
                 st.error("Lütfen geçerli bir e-posta adresi ve en az 6 karakterli bir şifre girin.")
                 return
@@ -289,7 +286,6 @@ def register_user(email, password):
             st.success(f"Kayıt Başarılı! Kullanıcı: {user['email']}")
             st.rerun()
         except Exception as e:
-            # pyrebase hataları genellikle HTTPError objesi döndürür
             error_message = str(e)
             if "EMAIL_EXISTS" in error_message:
                 st.error("Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.")
@@ -321,7 +317,6 @@ def login_user(email, password):
 def logout():
     """Çıkış işlemini gerçekleştirir."""
     st.session_state.user_info = None
-    # Çıkış yapıldığında sohbeti sıfırla
     st.session_state.messages = [{"role": "assistant", "content": "Görüşmek üzere! Yeni bir oturum başlattın. Nasılsın?"}]
     st.session_state.trial_end_time = time.time() + TRIAL_DURATION 
     st.success("Başarıyla çıkış yaptınız.")
@@ -336,8 +331,6 @@ def run_app():
     """Uygulamanın ana döngüsüdür."""
     st.set_page_config(layout="wide", page_title="AI Sohbet Sistemi")
     
-    # 5. Satırdaki pyrebase import hatasını çözmek için ilk çalışmada yüklemeyi atla
-    # Bu, sadece Streamlit'in bağımlılıkları ilk yükleyişinde oluşan sorunu önlemek içindir.
     if not st.session_state.is_loaded:
         display_splash_screen()
         return
