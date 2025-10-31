@@ -1,5 +1,6 @@
 import streamlit as st
 # pyrebase4'ü içe aktarıyoruz, ancak kodda pyrebase adıyla kullanmak için 'as pyrebase' ekledik.
+# requirements.txt dosyasına 'pyrebase4' eklenmelidir.
 import pyrebase4 as pyrebase 
 import time
 import random
@@ -278,13 +279,25 @@ def register_user(email, password):
     """Kullanıcı kayıt işlemini gerçekleştirir."""
     if st.session_state.firebase_connected:
         try:
+            # Firebase Auth'un e-posta/şifre formatı kontrolünü atlamadan önce basit bir kontrol
+            if not email or len(password) < 6:
+                st.error("Lütfen geçerli bir e-posta adresi ve en az 6 karakterli bir şifre girin.")
+                return
+
             user = auth.create_user_with_email_and_password(email, password)
             st.session_state.user_info = user
             st.success(f"Kayıt Başarılı! Kullanıcı: {user['email']}")
             st.rerun()
         except Exception as e:
-            st.error(f"Kayıt Hatası: {e}")
-            st.error("Lütfen: 1) E-posta/Şifre biçimini kontrol edin. 2) Firebase konsolunda **Authentication (Kimlik Doğrulama)** ayarlarını açtığınızdan emin olun.")
+            # pyrebase hataları genellikle HTTPError objesi döndürür
+            error_message = str(e)
+            if "EMAIL_EXISTS" in error_message:
+                st.error("Bu e-posta adresi zaten kayıtlı. Giriş yapmayı deneyin.")
+            elif "WEAK_PASSWORD" in error_message:
+                st.error("Şifre en az 6 karakter olmalıdır.")
+            else:
+                st.error(f"Kayıt Hatası: {error_message}")
+                st.error("Lütfen: 1) E-posta/Şifre biçimini kontrol edin. 2) Firebase konsolunda **Authentication (Kimlik Doğrulama)** ayarlarını açtığınızdan emin olun.")
     else:
         st.error("Firebase'e bağlanılamadığı için kayıt yapılamıyor.")
 
@@ -297,7 +310,11 @@ def login_user(email, password):
             st.success(f"Giriş Başarılı! Kullanıcı: {user['email']}")
             st.rerun()
         except Exception as e:
-            st.error(f"Giriş Hatası: {e}")
+            error_message = str(e)
+            if "INVALID_LOGIN_CREDENTIALS" in error_message or "EMAIL_NOT_FOUND" in error_message:
+                st.error("Giriş başarısız. E-posta veya şifreniz yanlış.")
+            else:
+                st.error(f"Giriş Hatası: {error_message}")
     else:
         st.error("Firebase'e bağlanılamadığı için giriş yapılamıyor.")
 
@@ -319,6 +336,8 @@ def run_app():
     """Uygulamanın ana döngüsüdür."""
     st.set_page_config(layout="wide", page_title="AI Sohbet Sistemi")
     
+    # 5. Satırdaki pyrebase import hatasını çözmek için ilk çalışmada yüklemeyi atla
+    # Bu, sadece Streamlit'in bağımlılıkları ilk yükleyişinde oluşan sorunu önlemek içindir.
     if not st.session_state.is_loaded:
         display_splash_screen()
         return
