@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Sohbet Asistanı</title>
     
+    <!-- Tailwind CSS Yükleniyor -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
@@ -25,7 +26,7 @@
         .message-box {
             max-width: 80%;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            animation: fadeIn 0.3s ease-out;
+            /* ANIMASYON KALDIRILDI: animation: fadeIn 0.3s ease-out; */
         }
         .user-message {
             background-color: #e0f2fe; /* Mavi 50 */
@@ -49,10 +50,12 @@
         .chat-history::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
+        /* ANIMASYON KALDIRILDI:
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        */
         .modal {
             background-color: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
@@ -67,13 +70,13 @@
             font-size: 0.8rem; 
             padding: 0.4rem 0.8rem; 
             border-radius: 9999px;
-            transition: all 0.2s;
+            /* ANIMASYON KALDIRILDI: transition: all 0.2s; */
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             margin: 0.25rem;
             text-decoration: none;
         }
         .tech-link:hover {
-            transform: translateY(-1px) scale(1.02);
+            /* ANIMASYON KALDIRILDI: transform: translateY(-1px) scale(1.02); */
             box-shadow: 0 5px 8px rgba(0, 0, 0, 0.15);
         }
         
@@ -101,15 +104,16 @@
             <svg class="w-7 h-7 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M3.636 5.636l.707.707m0 7.07l.707.707m6.364-7.07l-.707.707M12 21V9"></path></svg>
             AI Sohbet Asistanı
         </h1>
-        <!-- BUTON ARTIK EN BAŞTAN ETKİN VE YÜKLENİYOR DEMİYOR -->
-        <button id="auth-btn" class="px-5 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 text-sm">
+        
+        <!-- BUTON ARTIK HER ZAMAN ETKİN VE MODALI AÇAR -->
+        <button id="auth-btn" class="px-5 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 /* ANIMASYON KALDIRILDI: transition duration-150 */ text-sm">
             Giriş Yap / Kayıt Ol
         </button>
     </header>
 
     <!-- Oturum Bilgisi ve Hata Alanı -->
     <div id="auth-info" class="text-sm p-3 rounded-lg mb-4 flex flex-col md:flex-row items-center justify-between bg-blue-50 border border-blue-200">
-        <!-- DURUM METNİ DE HİÇBİR ZAMAN YÜKLENİYOR OLMAYACAK -->
+        <!-- DURUM METNİ -->
         <span id="auth-status" class="font-medium text-gray-500 mb-2 md:mb-0">
             Oturum Açık Değil. Lütfen giriş yapın veya anonim olarak kalın.
         </span>
@@ -118,7 +122,7 @@
             Gemini API Bağlantısı OK
         </span>
         <span id="update-info" class="text-xs text-gray-500 ml-0 md:ml-4 mt-2 md:mt-0">
-            Son Güncelleme: 02 Kasım 2025, 18:38
+            Son Güncelleme: 02 Kasım 2025, 18.42
         </span>
     </div>
 
@@ -139,11 +143,11 @@
             </h2>
             
             <!-- Bu prompt, her kullanıcı için ayrı ayrı Firestore'a kaydedilir (Özel Alan) -->
-            <textarea id="ai-system-prompt" rows="8" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 text-gray-800 bg-white resize-none placeholder-gray-400 text-sm" placeholder="AI'ın nasıl davranması gerektiğini buraya yazın.">
+            <textarea id="ai-system-prompt" rows="8" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 /* ANIMASYON KALDIRILDI: transition duration-150 */ text-gray-800 bg-white resize-none placeholder-gray-400 text-sm" placeholder="AI'ın nasıl davranması gerektiğini buraya yazın.">
 Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samimi bir tonda konuşursun.
             </textarea>
             
-            <button id="save-prompt-btn" class="mt-4 p-3 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition duration-150 disabled:bg-gray-300 disabled:text-gray-500" disabled>
+            <button id="save-prompt-btn" class="mt-4 p-3 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 /* ANIMASYON KALDIRILDI: transition duration-150 */ disabled:bg-gray-300 disabled:text-gray-500" disabled>
                 Talimatı Kaydet
             </button>
             <p id="prompt-status" class="mt-2 text-xs text-center text-gray-500">
@@ -189,13 +193,13 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
                 </div>
 
                 <form id="chat-form" class="flex gap-3">
-                    <input type="text" id="user-input" placeholder="Mesajınızı buraya yazın..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 text-gray-800 bg-white placeholder-gray-400" autocomplete="off" disabled>
-                    <button type="submit" id="send-btn" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 disabled:bg-gray-300 disabled:text-gray-500" disabled>
+                    <input type="text" id="user-input" placeholder="Mesajınızı buraya yazın..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 /* ANIMASYON KALDIRILDI: transition duration-150 */ text-gray-800 bg-white placeholder-gray-400" autocomplete="off" disabled>
+                    <button type="submit" id="send-btn" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 /* ANIMASYON KALDIRILDI: transition duration-150 */ disabled:bg-gray-300 disabled:text-gray-500" disabled>
                         Gönder
                     </button>
                 </form>
                 <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
-                    <button type="button" id="clear-chat-btn" class="hover:underline text-red-500 font-medium disabled:text-gray-400 transition duration-150" disabled>
+                    <button type="button" id="clear-chat-btn" class="hover:underline text-red-500 font-medium /* ANIMASYON KALDIRILDI: transition duration-150 */ disabled:text-gray-400" disabled>
                         Sohbeti Temizle (Yalnızca Sizin Mesajlarınız)
                     </button>
                     <span id="chat-error" class="text-red-500 font-medium hidden"></span>
@@ -215,24 +219,25 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
 
 
 <!-- Oturum Modal Penceresi (Login/Register Pop-up) -->
+<!-- Modal'daki animasyon sınıfları kaldırıldı -->
 <div id="auth-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden modal">
     <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
         <div class="flex justify-between items-center mb-6 border-b pb-3">
             <h3 class="text-2xl font-bold text-gray-800">Oturum Yönetimi</h3>
-            <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold transition duration-150">&times;</button>
+            <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold /* ANIMASYON KALDIRILDI: transition duration-150 */">&times;</button>
         </div>
         
         <!-- Tablar -->
         <div class="flex mb-4">
             <button id="modal-login-tab" class="flex-1 p-3 text-lg font-semibold rounded-l-lg bg-indigo-500 text-white">Giriş Yap</button>
-            <button id="modal-register-tab" class="flex-1 p-3 text-lg font-semibold rounded-r-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition duration-150">Kayıt Ol</button>
+            <button id="modal-register-tab" class="flex-1 p-3 text-lg font-semibold rounded-r-lg bg-gray-200 text-gray-700 hover:bg-gray-300 /* ANIMASYON KALDIRILDI: transition duration-150 */">Kayıt Ol</button>
         </div>
 
         <!-- Giriş Formu -->
         <div id="login-form-content">
             <input type="email" id="login-email" placeholder="E-posta" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
             <input type="password" id="login-password" placeholder="Şifre" class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
-            <button id="login-btn" class="w-full p-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150">Giriş Yap</button>
+            <button id="login-btn" class="w-full p-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 /* ANIMASYON KALDIRILDI: transition duration-150 */">Giriş Yap</button>
             <p id="login-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
         </div>
 
@@ -241,7 +246,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
             <input type="email" id="register-email" placeholder="E-posta" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
             <input type="password" id="register-password" placeholder="Şifre (Min 6 karakter)" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
             <input type="password" id="register-password-confirm" placeholder="Şifre Onayı" class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
-            <button id="register-btn" class="w-full p-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-150">Kayıt Ol</button>
+            <button id="register-btn" class="w-full p-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 /* ANIMASYON KALDIRILDI: transition duration-150 */">Kayıt Ol</button>
             <p id="register-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
         </div>
     </div>
@@ -290,7 +295,6 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     let isAILoading = false;
     let isReadyToChat = false; 
     let unsubscribeFromChatHistory = null;
-    let isInitialAuthAttempted = false; // İlk oturum açma denemesini takip etmek için (artık kullanılmayacak, sadece eski kodu temiz tutmak için tutuluyor)
 
     
     // Uygulama başlatma
@@ -742,16 +746,18 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
         }
     }
 
+    // Düzeltilmiş olay dinleyicisi: Oturum durumu ne olursa olsun, butona tıklanınca MODALI AÇ
     authBtnEl.addEventListener('click', async () => {
-        // Oturum açılmış ve anonim değilse (üye), ÇIKIŞ YAP
         if (auth.currentUser && !auth.currentUser.isAnonymous) { 
+            // Oturum açık ve üye ise, çıkış yap
             try {
                 await signOut(auth);
                 closeAuthModal();
             } catch (error) {
                 console.error("Çıkış yapma hatası:", error);
             }
-        } else { // Anonim ise veya oturum kapalıysa, modalı aç
+        } else { 
+            // Anonim ise veya oturum kapalıysa, modalı aç
             openAuthModal();
         }
     });
@@ -841,8 +847,6 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
             unsubscribeFromChatHistory = null;
         }
         
-        // Buton metni zaten doğru olduğu için buradaki metin güncelleme mantığı kaldırıldı.
-        
         if (user) {
             // Oturum Açık (Anonim, Üye veya Token ile)
             userId = user.uid;
@@ -901,4 +905,3 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
 </script>
 </body>
 </html>
-
