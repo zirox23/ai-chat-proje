@@ -59,11 +59,28 @@
             to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Modal Stili (Animasyon Kaldırıldı, Sadece Geçiş Korundu) */
+        /* Modal Stili (Kesinlikle Görünür Olması İçin Opaklık ve Pointer Olayları) */
         .modal {
             background-color: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
             z-index: 1000;
+        }
+
+        /* Link stilleri */
+        .tech-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 0.875rem; /* text-sm */
+            padding: 0.25rem 0.75rem; /* py-1 px-3 */
+            border-radius: 9999px; /* rounded-full */
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
+        }
+        .tech-link:hover {
+            transform: scale(1.05);
+            box-shadow: 0 4px 6px 0 rgba(0, 0, 0, 0.15);
         }
     </style>
 </head>
@@ -92,7 +109,7 @@
             Gemini API Bağlantısı OK
         </span>
         <span id="update-info" class="text-xs text-gray-500 ml-0 md:ml-4 mt-2 md:mt-0">
-            Son Güncelleme: 02 Kasım 2025, 03:08
+            <!-- İstenen Güncelleme Tarihi Buraya Gelecek -->
         </span>
     </div>
 
@@ -153,17 +170,38 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     </div>
     
     <!-- Footer -->
-    <footer class="text-center text-xs text-gray-500 mt-6 border-t border-gray-200 pt-4">
-        Teknoloji Kaynakları: <a href="https://ai.google.dev/gemini-api" target="_blank" class="hover:underline text-blue-600 font-semibold">Google Gemini API</a> | 
-        <a href="https://firebase.google.com/" target="_blank" class="hover:underline text-yellow-600 font-semibold">Firebase Firestore & Auth</a> | 
-        <a href="https://tailwindcss.com/" target="_blank" class="hover:underline text-teal-600 font-semibold">Tailwind CSS</a>
+    <footer class="text-center text-xs text-gray-500 mt-6 border-t border-gray-200 pt-4 bg-white rounded-b-xl">
+        <!-- İstenen Güncelleme Tarihi -->
+        <p class="text-sm font-semibold mb-3">
+            <span class="text-red-600">2 Kasım 2025, 15:10'da</span> Güncellendi
+        </p>
+
+        <!-- Renkli Teknolojik Linkler -->
+        <p class="text-gray-700 font-medium mb-2">Bize Yardım Eden Teknolojiler:</p>
+        <div class="flex justify-center space-x-4 mb-4">
+            <a href="https://github.com" target="_blank"
+               class="tech-link"
+               style="background-color: #24292e; color: #ffffff;">
+               GitHub
+            </a>
+            <a href="https://ai.google.dev/gemini-api" target="_blank"
+               class="tech-link"
+               style="background-color: #00bcd4; color: #ffffff;">
+               Gemini API
+            </a>
+            <a href="https://firebase.google.com" target="_blank"
+               class="tech-link"
+               style="background-color: #FFCA28; color: #37474F;">
+               Firebase
+            </a>
+        </div>
     </footer>
 </div>
 
 
 <!-- Oturum Modal Penceresi (Login/Register Pop-up) -->
 <div id="auth-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden modal">
-    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md"> <!-- modal-content sınıfı kaldırıldı -->
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md">
         <div class="flex justify-between items-center mb-6 border-b pb-3">
             <h3 class="text-2xl font-bold text-gray-800">Oturum Yönetimi</h3>
             <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold transition duration-150">&times;</button>
@@ -260,6 +298,9 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     const registerBtnEl = document.getElementById('register-btn');
     const registerErrorEl = document.getElementById('register-error');
 
+    // Güncelleme tarihi set ediliyor.
+    updateInfoEl.textContent = 'Son Güncelleme: 02 Kasım 2025, 15:10';
+
     // --- YARDIMCI FONKSİYONLAR ---
 
     function createMessageElement(text, role, isPending = false) {
@@ -269,7 +310,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
         messageDiv.className = `message-box p-4 rounded-xl ${roleClass} flex flex-col`;
 
         if (isPending) {
-            // Loading animasyonu kaldırıldı, sadece metin gösteriliyor
+            // Animasyon kaldırıldı, sadece metin gösteriliyor
             messageDiv.innerHTML = `<div class="text-gray-500 italic">AI yanıt bekleniyor...</div>`;
             messageDiv.id = 'pending-ai-response';
         } else {
@@ -452,6 +493,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
 
         const systemPrompt = aiSystemPromptEl.value.trim() || 'Sen kibar ve yardımcı bir yapay zeka asistanısısın.';
 
+        // Yalnızca son 10 mesajı al
         const contents = chatHistory.slice(-10).map(msg => ({ 
             role: msg.role === 'user' ? 'user' : 'model',
             parts: [{ text: msg.text }]
@@ -493,6 +535,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
             const pendingEl = document.getElementById('pending-ai-response');
             if (pendingEl) pendingEl.remove();
             
+            // Kullanıcı mesajı ve AI yanıtını veritabanına kaydet
             await saveMessagesToDB(userQuery, aiResponseText);
             
             setLoadingState(false);
@@ -505,12 +548,14 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
         const userTime = Date.now();
 
         try {
+            // Kullanıcı Mesajını Kaydet
             await setDoc(doc(chatCollectionRef), {
                 text: userText,
                 role: 'user',
                 timestamp: userTime 
             });
 
+            // AI Mesajını Kaydet (bir milisaniye sonra eklenerek sıralamada sonraya atılır)
             await setDoc(doc(chatCollectionRef), {
                 text: aiText,
                 role: 'model',
@@ -525,7 +570,6 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     // --- MODAL YÖNETİMİ ---
     function openAuthModal(mode = 'login') {
         authModalEl.classList.remove('hidden');
-        // Giriş/Kayıt butonlarının içeriğini güncelledik, bu yüzden modalı kapatıyoruz
         if (mode === 'register') {
             showRegisterForm();
         } else {
@@ -569,32 +613,26 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
             
             authStatusEl.innerHTML = `
                 <span class="font-semibold text-green-700">**Giriş Başarılı:**</span>
-                <span class="text-gray-600">**Üyeli Oturum | Kullanıcı:** ${userEmail}</span>
+                <span class="text-gray-600">**Oturum Tipi:** ${userEmail.includes('@') ? 'Üye' : 'Anonim'} | **Kullanıcı ID:** ${userId.substring(0, 8) + '...'}</span>
             `;
-            // Sadece üye oturumunda (anonim değilse) güncellenme zamanını göster
-            if (userEmail !== 'Anonim Kullanıcı') {
-                updateInfoEl.textContent = `Son Güncelleme: ${new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
-            } else {
-                 updateInfoEl.textContent = '';
-            }
-
+            // Kullanıcı ID'sini konsola yazdırıyoruz.
+            console.log("Mevcut Kullanıcı ID:", userId);
         } else {
             authBtnEl.textContent = 'Giriş Yap / Kayıt Ol'; 
             authBtnEl.classList.remove('bg-red-500', 'hover:bg-red-600');
             authBtnEl.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-            authStatusEl.innerHTML = `<span class="font-semibold text-gray-500">Anonim olarak devam ediliyor.</span>`;
-            updateInfoEl.textContent = ''; // Anonim kullanıcıda güncelleme zamanı gösterme
+            authStatusEl.innerHTML = `<span class="font-semibold text-gray-500">Anonim olarak devam ediliyor. Lütfen giriş yapın.</span>`;
         }
     }
 
     authBtnEl.addEventListener('click', async () => {
-        if (auth.currentUser && auth.currentUser.isAnonymous === false) { // Üye ise çıkış yap
+        // Anonim olmayan (yani e-posta/şifre ile giriş yapmış) bir kullanıcı varsa ÇIKIŞ YAP
+        if (auth.currentUser && auth.currentUser.isAnonymous === false) { 
             try {
                 await signOut(auth);
                 closeAuthModal();
             } catch (error) {
                 console.error("Çıkış yapma hatası:", error);
-                // Uyarı yerine modal/mesaj kutusu kullanılmalıdır, ancak ortamda basitlik için console'a yazıldı.
             }
         } else { // Anonim ise veya hiç oturum yoksa modalı aç
             openAuthModal();
@@ -677,7 +715,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
 
         if (user) {
             // Kullanıcının e-postası varsa üye oturumu, yoksa (isAnonymous true ise) anonim oturum.
-            const userEmail = user.isAnonymous ? 'Anonim Kullanıcı' : user.email || 'Kullanıcı ID: ' + user.uid.substring(0, 8) + '...';
+            const userEmail = user.isAnonymous ? 'Anonim Kullanıcı' : user.email || user.uid;
             userId = user.uid;
             updateAuthUI(true, userEmail);
             setChatReadyState(false); // Veri yüklenene kadar bekle
