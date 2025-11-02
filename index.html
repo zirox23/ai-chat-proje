@@ -61,8 +61,8 @@
                 
                 <!-- Hata/Uyarı Alanı -->
                 <div id="alert-container" class="space-y-2">
-                    <div id="api-warning" class="text-sm p-3 bg-red-100 text-red-700 border border-red-300 rounded-lg hidden">
-                        ⚠️ **UYARI:** **Gemini API Key** ayarlanmamış. Sohbet çalışmayacaktır.
+                    <div id="api-warning" class="text-sm p-3 bg-green-100 text-green-700 border border-green-300 rounded-lg hidden">
+                        ✅ **BİLGİ:** **Gemini API Key** başarıyla yapılandırıldı.
                     </div>
                     <div id="firebase-warning" class="text-sm p-3 bg-red-100 text-red-700 border border-red-300 rounded-lg hidden">
                         ❌ **GİRİŞ HATASI:** Firebase anahtarınız veya Anonim/Token giriş ayarlarınız hatalı olabilir. Sohbet kilitli.
@@ -160,8 +160,12 @@
         const COLLECTION_NAME = 'ai_chats';
         const DEFAULT_SYSTEM_INSTRUCTION = "Sen yardımcı ve kibar bir yapay zeka asistanısın. Türkçe olarak yanıt ver. Yanıtlarını kibar ve samimi bir tonda tut.";
         
+        // Kullanıcının sağladığı anahtar doğrudan buraya eklendi.
+        const USER_PROVIDED_GEMINI_API_KEY = "AIzaSyBdeqvxeHy_SrZYms2xxjUyohU8qPkg0u0";
+        // Canvas ortamından gelen anahtar veya kullanıcıdan gelen anahtar kullanılır.
+        const GEMINI_API_KEY = USER_PROVIDED_GEMINI_API_KEY || (typeof __gemini_api_key !== 'undefined' ? __gemini_api_key : ""); 
+        
         // Firebase Config (Kullanıcının verdiği Web API Key ile güncellendi)
-        // Eğer Canvas ortamındaysak __firebase_config kullanılır. Değilse, kullanıcıdan aldığımız statik anahtarı kullanırız.
         const staticFirebaseConfig = {
             // KULLANICININ SAĞLADIĞI WEB API KEY BURADA:
             apiKey: "AIzaSyBmtvU_ceKdSXf-jVmrUPYeH1L9pDw5vdc", 
@@ -174,8 +178,6 @@
 
         const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : staticFirebaseConfig;
         
-        // Gemini API Key (Sohbet için gereklidir)
-        const GEMINI_API_KEY = typeof __gemini_api_key !== 'undefined' ? __gemini_api_key : ""; 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
         // __initial_auth_token'ın tanımlanıp tanımlanmadığını kontrol etmek için dışarıda tanımlayın
@@ -245,10 +247,14 @@
             
             isAuthReady = isReady;
 
-            const isApiKeyValid = GEMINI_API_KEY && GEMINI_API_KEY.length > 10;
-            const finalReady = isReady && isApiKeyValid;
+            // Gemini API Key'in var olup olmadığını kontrol et (Kullanıcının key'i artık var)
+            const isApiKeyValid = GEMINI_API_KEY && GEMINI_API_KEY.length > 10; 
             
-            document.getElementById('api-warning').classList.toggle('hidden', isApiKeyValid);
+            // Sadece Auth'un hazır olması UI'ı etkinleştirmek için yeterlidir.
+            const finalReady = isReady; 
+
+            // API uyarı/bilgi mesajını ayarla
+            document.getElementById('api-warning').classList.toggle('hidden', !isApiKeyValid);
             firebaseWarning.classList.toggle('hidden', !errorMessage);
 
             if (errorMessage) {
@@ -273,7 +279,7 @@
                 document.getElementById('instruction-status').textContent = "Talimatınız kaydedilebilir.";
             }
 
-            userInput.placeholder = finalReady ? "Mesajınızı buraya yazın..." : (errorMessage || "Oturum açma bekleniyor veya API hatası var.");
+            userInput.placeholder = finalReady ? "Mesajınızı buraya yazın..." : (errorMessage || "Oturum açma bekleniyor.");
         }
 
         // =========================================================================
@@ -397,6 +403,7 @@
             statusText.innerHTML = `✅ **Giriş Başarılı.** ${user.isAnonymous ? 'Anonim Oturum' : 'Üyeli Oturum'} | Kullanıcı: <span class="font-bold">${email}</span>`;
             
             await loadChatHistory(currentUserId);
+            // Sadece auth hazır olduğunda UI'ı etkinleştir
             updateUIVisibility(true, isAnonymous);
             
             if (isAnonymous) {
@@ -599,6 +606,12 @@
 
         async function callGemini(message) {
             if (!isAuthReady) return; // Oturum hazır değilse API çağrısını engelle
+            
+            if (!GEMINI_API_KEY) {
+                showModal("API Hatası", "Gemini API Anahtarı eksik. Mesaj gönderilemedi.");
+                return;
+            }
+
 
             const loadingIndicator = document.getElementById('loading-indicator');
             loadingIndicator.classList.remove('hidden');
@@ -618,6 +631,7 @@
 
             const payload = {
                 contents: contentsPayload, 
+                // Google Search Grounding'i etkinleştir
                 tools: [{ "google_search": {} }], 
                 systemInstruction: {
                     parts: [{ text: systemInstruction }]
@@ -645,11 +659,10 @@
                     renderChatHistory(chatHistory);
                     
                     // Her başarılı yanıttan sonra sohbeti kaydet
-                    // Anonimse ve sohbet varsa silinmek üzere işaretle.
                     await saveChatHistory(currentUserId, chatHistory, systemInstruction, isAnonymous && chatHistory.length > 0); 
                 } else {
                     let reason = candidate?.finishReason || "Bilinmiyor";
-                    chatHistory.push({ role: "model", parts: [{ text: `Yanıt alınamadı. Bitiş Nedeni: ${reason}.` }] });
+                    chatHistory.push({ role: "model", parts: [{ text: `Yanıt alınamadı. Bitiş Nedeni: ${reason}. Konsolu kontrol edin.` }] });
                     renderChatHistory(chatHistory);
                 }
 
@@ -692,7 +705,6 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
                 
-                // Firestore Hata Ayıklama Günlüklerini Etkinleştir
                 // setLogLevel('Debug');
 
                 onAuthStateChanged(auth, async (user) => {
