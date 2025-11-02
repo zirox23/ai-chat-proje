@@ -108,7 +108,7 @@
     <!-- Firebase Kütüphaneleri -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global Değişkenler
@@ -193,31 +193,36 @@
 
         /**
          * UI elemanlarının aktif/pasif durumunu günceller
+         * @param {boolean} isReady - Arayüzün aktif olup olmayacağını belirtir (Auth başarılıysa true)
          */
         function updateUIVisibility(isReady = false) {
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
             const instructionTextarea = document.getElementById('instruction-textarea');
             const instructionUpdateBtn = document.getElementById('instruction-update-btn');
+            const apiWarning = document.getElementById('api-warning');
+            
+            // API Anahtarı Kontrolü (Hata Düzeltme)
+            // Eğer anahtar boşsa veya varsayılan bir placeholder ise uyarı göster ve kitle.
+            const isApiKeyValid = GEMINI_API_KEY && GEMINI_API_KEY.length > 10 && GEMINI_API_KEY !== "AIzaSyBdeqvxeHy_SrZYms2xxjUyohU8qPkg0u0";
+            
+            if (!isApiKeyValid) {
+                apiWarning.classList.remove('hidden');
+                isReady = false; // API anahtarı yoksa hazır değil
+            } else {
+                apiWarning.classList.add('hidden');
+            }
 
+            // UI'ı sadece hazır ve API anahtarı geçerliyse aktif et
             userInput.disabled = !isReady;
             sendBtn.disabled = !isReady;
             instructionTextarea.disabled = !isReady;
             instructionUpdateBtn.disabled = !isReady;
 
             if (!isReady) {
-                userInput.placeholder = "Giriş yapılıyor, lütfen bekleyin...";
+                userInput.placeholder = "Giriş yapılıyor veya API Anahtarı bekleniyor...";
             } else {
                 userInput.placeholder = "Mesajınızı buraya yazın...";
-            }
-
-            // API uyarısını kontrol et (Gemini anahtarı doğru değilse sohbeti tamamen kilitler)
-            if (GEMINI_API_KEY.includes("AIzaSyBdeqvxeHy_SrZYms2xxjUyohU8qPkg0u0")) {
-                document.getElementById('api-warning').classList.remove('hidden');
-                userInput.disabled = true;
-                sendBtn.disabled = true;
-                instructionTextarea.disabled = true;
-                instructionUpdateBtn.disabled = true;
             }
         }
 
@@ -242,14 +247,17 @@
                         currentUserId = user.uid;
                         statusText.innerHTML = `✅ **Anonim Giriş Başarılı.** Kullanıcı: ANONYMOUS | UID: \`${user.uid.substring(0, 8)}...\``;
                         document.getElementById('instruction-textarea').value = DEFAULT_SYSTEM_INSTRUCTION;
-                        updateUIVisibility(true); // UI'ı aktif et
+                        
+                        // Auth başarılı, UI'ı aktif etme çağrısı
+                        updateUIVisibility(true); 
+                        
                         renderChatHistory(chatHistory); // Başlangıç mesajını göster
                     } else {
                         // Kullanıcı yoksa anonim giriş yap
                         statusText.textContent = "Anonim olarak giriş yapılıyor...";
                         
-                        // Önce `__initial_auth_token` olup olmadığını kontrol et (Canvas ortamı için)
                         if (typeof __initial_auth_token !== 'undefined') {
+                             // Canvas ortamında otomatik giriş
                              await signInWithCustomToken(auth, __initial_auth_token);
                         } else {
                             // Token yoksa anonim giriş yap
@@ -257,7 +265,7 @@
                                 console.error("Anonim Giriş Hatası:", error);
                                 document.getElementById('auth-status').innerHTML = `<span class="text-red-600 font-bold">❌ GİRİŞ HATASI: ${error.message}</span>`;
                                 document.getElementById('firebase-warning').classList.remove('hidden');
-                                updateUIVisibility(false); // Hata durumunda UI'ı devre dışı bırak
+                                updateUIVisibility(false); 
                             });
                         }
                     }
@@ -320,11 +328,12 @@
          */
         async function callGemini(message) {
             const loadingIndicator = document.getElementById('loading-indicator');
-            const sendButton = document.getElementById('send-btn');
             
             // UI kitle
             loadingIndicator.classList.remove('hidden');
-            updateUIVisibility(false); 
+            // Kullanıcının UI'ı kilitlenmiş gibi görmesini engellemek için, sadece input'u kitle
+            document.getElementById('user-input').disabled = true;
+            document.getElementById('send-btn').disabled = true;
 
             // Yeni kullanıcı mesajını geçici geçmişe ekle ve hemen render et
             chatHistory.push({ role: "user", parts: [{ text: message }] });
@@ -408,7 +417,9 @@
             } finally {
                 // UI kilidini kaldır ve temizle
                 loadingIndicator.classList.add('hidden');
-                updateUIVisibility(true); 
+                // Sadece input'ları geri aç
+                document.getElementById('user-input').disabled = false;
+                document.getElementById('send-btn').disabled = false;
             }
         }
 
