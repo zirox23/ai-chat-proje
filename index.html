@@ -5,28 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Sohbet Asistanı</title>
     
-
-<script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
         body {
             font-family: 'Inter', sans-serif;
-            background-color: #f0f2f5; /* Hafif Gri Arka Plan */
-            overflow: hidden; /* Dışarı taşmaları engelle */
+            background-color: #f0f2f5; 
+            overflow: hidden;
         }
         #app {
-            background-color: white; /* Beyaz Ana Kutu */
+            background-color: white; 
             border: 1px solid #e2e8f0;
-            min-height: calc(100vh - 2rem); /* Alt kısımdaki boşluğu azaltır */
+            min-height: calc(100vh - 2rem);
         }
         .chat-container {
-            height: calc(100vh - 12rem); /* Header, footer ve marginleri hesaba katar */
-            min-height: 400px; /* Minimum yükseklik */
+            height: calc(100vh - 12rem); 
+            min-height: 400px;
         }
         .message-box {
             max-width: 80%;
             box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
-            animation: fadeIn 0.3s ease-out; /* Mesaj fade-in animasyonu korundu */
+            animation: fadeIn 0.3s ease-out;
         }
         .user-message {
             background-color: #e0f2fe; /* Mavi 50 */
@@ -40,8 +39,6 @@
             border: 1px solid #dcfce7; /* Yeşil 200 */
             border-bottom-left-radius: 0.5rem;
         }
-        
-        /* Özelleştirilmiş Kaydırma Çubuğu */
         .chat-history::-webkit-scrollbar {
             width: 8px;
         }
@@ -52,29 +49,23 @@
         .chat-history::-webkit-scrollbar-track {
             background: #f1f5f9;
         }
-
-        /* Mesaj Fade-In Animasyonu Korundu */
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
-
-        /* Modal Stili (Kesinlikle Görünür Olması İçin Opaklık ve Pointer Olayları) */
         .modal {
             background-color: rgba(0, 0, 0, 0.6);
             backdrop-filter: blur(5px);
             z-index: 1000;
         }
-
-        /* Link stilleri */
         .tech-link {
             display: inline-flex;
             align-items: center;
             justify-content: center;
             font-weight: 700;
-            font-size: 0.875rem; /* text-sm */
-            padding: 0.25rem 0.75rem; /* py-1 px-3 */
-            border-radius: 9999px; /* rounded-full */
+            font-size: 0.875rem; 
+            padding: 0.25rem 0.75rem; 
+            border-radius: 9999px;
             transition: all 0.2s;
             box-shadow: 0 2px 4px 0 rgba(0, 0, 0, 0.1);
         }
@@ -95,11 +86,11 @@
             AI Sohbet Asistanı
         </h1>
         <button id="auth-btn" class="px-5 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 text-sm">
-            Giriş Yap / Kayıt Ol
+            Oturum Durumu Yükleniyor...
         </button>
     </header>
 
-    <!-- Oturum Bilgisi -->
+    <!-- Oturum Bilgisi ve Hata Alanı -->
     <div id="auth-info" class="text-sm p-3 rounded-lg mb-4 flex flex-col md:flex-row items-center justify-between bg-blue-50 border border-blue-200">
         <span id="auth-status" class="font-medium text-blue-800 mb-2 md:mb-0">
             Oturum durumu yükleniyor...
@@ -109,20 +100,27 @@
             Gemini API Bağlantısı OK
         </span>
         <span id="update-info" class="text-xs text-gray-500 ml-0 md:ml-4 mt-2 md:mt-0">
-            <!-- İstenen Güncelleme Tarihi Buraya Gelecek -->
+            Son Güncelleme: 02 Kasım 2025, 15:30
         </span>
+    </div>
+
+    <!-- Kritik Hata Mesajı -->
+    <div id="critical-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4 hidden">
+        <strong class="font-bold">Kritik Hata:</strong>
+        <span id="error-message" class="block sm:inline"></span>
     </div>
 
     <!-- Ana İçerik: Talimat ve Sohbet Alanları -->
     <div id="main-content" class="flex flex-col md:flex-row gap-6 chat-container">
         
-        <!-- AI Talimat Alanı -->
+        <!-- AI Talimat Alanı (Kişisel Prompt) -->
         <div class="md:w-1/3 bg-gray-50 p-5 rounded-xl border border-gray-200 flex flex-col shadow-sm">
             <h2 class="text-lg font-bold text-gray-700 mb-3 flex items-center">
                 <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-                AI Talimatı (System Prompt)
+                AI Talimatı (Sistem Rolü)
             </h2>
             
+            <!-- Bu prompt, her kullanıcı için ayrı ayrı Firestore'a kaydedilir (Özel Alan) -->
             <textarea id="ai-system-prompt" rows="8" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 text-gray-800 bg-white resize-none placeholder-gray-400 text-sm" placeholder="AI'ın nasıl davranması gerektiğini buraya yazın.">
 Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samimi bir tonda konuşursun.
             </textarea>
@@ -140,27 +138,27 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
             
             <h2 class="text-lg font-bold text-gray-700 p-4 border-b border-gray-200 flex items-center">
                 <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z"></path></svg>
-                Sohbetiniz
+                Sohbetiniz (Anonim ve Girişli Kullanıcılar Ortak)
             </h2>
 
             <!-- Sohbet Geçmişi -->
             <div id="chat-history" class="chat-history flex-1 p-4 md:p-6 overflow-y-auto space-y-4">
                 <div class="text-center text-gray-400 italic p-4" id="initial-message">
-                    Oturum durumu kontrol ediliyor. Lütfen bekleyiniz...
+                    Oturum açılıyor. Lütfen bekleyiniz...
                 </div>
             </div>
 
             <!-- Mesaj Gönderme Formu -->
             <div class="p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
                 <form id="chat-form" class="flex gap-3">
-                    <input type="text" id="user-input" placeholder="Oturum açması bekleniyor..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 text-gray-800 bg-white placeholder-gray-400" autocomplete="off" disabled>
+                    <input type="text" id="user-input" placeholder="Mesajınızı buraya yazın..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 text-gray-800 bg-white placeholder-gray-400" autocomplete="off" disabled>
                     <button type="submit" id="send-btn" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 disabled:bg-gray-300 disabled:text-gray-500" disabled>
                         Gönder
                     </button>
                 </form>
                 <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
                     <button type="button" id="clear-chat-btn" class="hover:underline text-red-500 font-medium disabled:text-gray-400 transition duration-150" disabled>
-                        Sohbeti Temizle (Veritabanı dahil)
+                        Sohbeti Temizle (Yalnızca Sizin Mesajlarınız)
                     </button>
                     <span id="chat-error" class="text-red-500 font-medium hidden"></span>
                 </div>
@@ -171,12 +169,11 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     
     <!-- Footer -->
     <footer class="text-center text-xs text-gray-500 mt-6 border-t border-gray-200 pt-4 bg-white rounded-b-xl">
-        <!-- İstenen Güncelleme Tarihi -->
         <p class="text-sm font-semibold mb-3">
-            <span class="text-red-600">2 Kasım 2025, 15:10'da</span> Güncellendi
+            <span class="text-red-600">02 Kasım 2025, 15:30'da</span> Güncellendi
         </p>
 
-        <!-- Renkli Teknolojik Linkler -->
+        <!-- Renkli Teknolojik Linkler (Artık Görünür Olmalı) -->
         <p class="text-gray-700 font-medium mb-2">Bize Yardım Eden Teknolojiler:</p>
         <div class="flex justify-center space-x-4 mb-4">
             <a href="https://github.com" target="_blank"
@@ -224,7 +221,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
         <!-- Kayıt Formu -->
         <div id="register-form-content" class="hidden">
             <input type="email" id="register-email" placeholder="E-posta" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
-            <input type="password" id="register-password" placeholder="Şifre" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
+            <input type="password" id="register-password" placeholder="Şifre (Min 6 karakter)" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
             <input type="password" id="register-password-confirm" placeholder="Şifre Onayı" class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
             <button id="register-btn" class="w-full p-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-150">Kayıt Ol</button>
             <p id="register-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
@@ -236,33 +233,67 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
 <script type="module">
     // Firebase ve Diğer Modül İçe Aktarmaları
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, setDoc, collection, query, onSnapshot, serverTimestamp, deleteDoc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { 
+        getAuth, 
+        signInAnonymously, 
+        signInWithCustomToken, 
+        signOut, 
+        onAuthStateChanged, 
+        createUserWithEmailAndPassword, 
+        signInWithEmailAndPassword 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { 
+        getFirestore, 
+        doc, 
+        setDoc, 
+        collection, 
+        query, 
+        onSnapshot, 
+        serverTimestamp, 
+        deleteDoc, 
+        getDocs, 
+        getDoc,
+        where 
+    } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    import { setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 
     // --- GLOBAL AYARLAR ---
     const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-chat-app';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
     const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-    const apiKey = ""; // Canvas ortamında API anahtarı otomatik sağlanır.
+    const apiKey = ""; 
 
-    let db, auth;
+    setLogLevel('debug'); // Firestore ve Auth için detaylı logları aç
+
+    let db, auth, app;
     let userId = null;
     let chatHistory = [];
     let isAILoading = false;
     let isReadyToChat = false; 
-
-    // --- FIREBASE BAŞLATMA ---
+    let unsubscribeFromChatHistory = null;
+    
+    // Uygulama başlatma
     try {
-        const app = initializeApp(firebaseConfig);
-        auth = getAuth(app);
-        db = getFirestore(app);
+        if (firebaseConfig) {
+            app = initializeApp(firebaseConfig);
+            auth = getAuth(app);
+            db = getFirestore(app);
+        } else {
+            document.getElementById('error-message').textContent = 'Firebase yapılandırması eksik. Uygulama çalışmayacaktır.';
+            document.getElementById('critical-error').classList.remove('hidden');
+        }
     } catch (e) {
         console.error("Firebase başlatma hatası:", e);
-        document.getElementById('auth-status').innerHTML = '<span class="text-red-500 font-bold">HATA: Firebase Yapılandırması Eksik!</span>';
+        document.getElementById('error-message').textContent = `Firebase başlatma hatası: ${e.message}`;
+        document.getElementById('critical-error').classList.remove('hidden');
     }
     
     // Firestore Yol Yardımcıları
-    const getChatCollectionRef = (uid) => collection(db, `artifacts/${appId}/users/${uid}/chat_history`);
+    // ORTAK SOHBET YOLU: ANOMİM VE ÜYELERİN HEPSİ BURAYA YAZAR/OKUR (MANDATORY PUBLIC PATH)
+    const getChatCollectionRef = () => collection(db, `artifacts/${appId}/public/data/chat_messages`);
+    
+    // KİŞİSEL AYARLAR YOLU (SADECE GİRİŞ YAPMIŞ KULLANICILARIN PROMPT AYARI)
     const getPromptDocRef = (uid) => doc(db, `artifacts/${appId}/users/${uid}/ai_settings`, 'prompt_settings');
     
     // --- UI ELEMANLARI ---
@@ -279,7 +310,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     const initialMessageEl = document.getElementById('initial-message');
     const clearChatBtnEl = document.getElementById('clear-chat-btn');
     const geminiStatusEl = document.getElementById('gemini-status');
-    const updateInfoEl = document.getElementById('update-info');
+    const criticalErrorEl = document.getElementById('critical-error');
     
     // Modal Elemanları
     const authModalEl = document.getElementById('auth-modal');
@@ -298,43 +329,61 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     const registerBtnEl = document.getElementById('register-btn');
     const registerErrorEl = document.getElementById('register-error');
 
-    // Güncelleme tarihi set ediliyor.
-    updateInfoEl.textContent = 'Son Güncelleme: 02 Kasım 2025, 15:10';
 
     // --- YARDIMCI FONKSİYONLAR ---
 
-    function createMessageElement(text, role, isPending = false) {
+    function displayError(message) {
+        criticalErrorEl.classList.remove('hidden');
+        document.getElementById('error-message').textContent = message;
+        setChatReadyState(false);
+    }
+    
+    function createMessageElement(text, role, uid, currentUserId) {
         const messageDiv = document.createElement('div');
-        const roleClass = role === 'user' ? 'user-message rounded-bl-xl' : 'ai-message rounded-br-xl';
+        const isUser = uid === currentUserId; // Kullanıcı kendi mesajı mı
+        const roleClass = isUser ? 'user-message rounded-bl-xl' : 'ai-message rounded-br-xl';
+        const senderLabel = isUser ? 'Siz' : (role === 'model' ? 'AI Asistanı' : 'Anonim');
         
         messageDiv.className = `message-box p-4 rounded-xl ${roleClass} flex flex-col`;
-
-        if (isPending) {
-            // Animasyon kaldırıldı, sadece metin gösteriliyor
-            messageDiv.innerHTML = `<div class="text-gray-500 italic">AI yanıt bekleniyor...</div>`;
-            messageDiv.id = 'pending-ai-response';
-        } else {
-            messageDiv.innerHTML = `<p class="whitespace-pre-wrap">${text}</p>`;
-        }
+        
+        // Sadece AI mesajlarında tam metni göster, diğer mesajlarda sadece metni göster.
+        messageDiv.innerHTML = `
+            <div class="font-bold text-xs mb-1 ${isUser ? 'text-indigo-600' : 'text-green-800'}">
+                ${senderLabel} - ID: ${uid.substring(0, 4)}
+            </div>
+            <p class="whitespace-pre-wrap">${text}</p>
+        `;
 
         const container = document.createElement('div');
-        container.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} w-full`;
+        container.className = `flex ${isUser ? 'justify-end' : 'justify-start'} w-full`;
         container.appendChild(messageDiv);
 
         chatHistoryEl.appendChild(container);
+    }
+    
+    function createPendingElement() {
+        const container = document.createElement('div');
+        container.className = `flex justify-start w-full`;
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `message-box p-4 rounded-xl ai-message rounded-br-xl flex flex-col`;
+        messageDiv.innerHTML = `<div class="text-gray-500 italic">AI yanıt bekleniyor...</div>`;
+        messageDiv.id = 'pending-ai-response';
+        container.appendChild(messageDiv);
+        chatHistoryEl.appendChild(container);
         chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
     }
+
 
     function renderChatHistory(history) {
         chatHistory = history;
         chatHistoryEl.innerHTML = ''; 
         if (history.length === 0) {
-            initialMessageEl.textContent = 'Merhaba! Sohbeti başlatmak için bir şeyler yazın.';
+            initialMessageEl.textContent = 'Merhaba! Sohbeti başlatmak için bir şeyler yazın. Sohbetiniz herkes tarafından görülecektir.';
             chatHistoryEl.appendChild(initialMessageEl);
             initialMessageEl.classList.remove('hidden');
         } else {
             initialMessageEl.classList.add('hidden');
-            history.forEach(msg => createMessageElement(msg.text, msg.role));
+            history.forEach(msg => createMessageElement(msg.text, msg.role, msg.uid, userId));
         }
         chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
     }
@@ -342,17 +391,18 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     function setChatReadyState(ready) {
         isReadyToChat = ready;
         userInputEl.disabled = !ready || isAILoading;
-        savePromptBtnEl.disabled = !ready;
         clearChatBtnEl.disabled = !ready;
         
         if (ready) {
             userInputEl.placeholder = "Mesajınızı buraya yazın...";
             geminiStatusEl.classList.remove('hidden');
+            authBtnEl.disabled = false;
         } else {
-            userInputEl.placeholder = "Oturum açması bekleniyor...";
+            userInputEl.placeholder = "Oturum bekleniyor...";
             userInputEl.disabled = true;
             sendBtnEl.disabled = true;
             geminiStatusEl.classList.add('hidden');
+            authBtnEl.disabled = true;
         }
         sendBtnEl.disabled = !ready || isAILoading || userInputEl.value.trim() === '';
     }
@@ -364,18 +414,21 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     }
 
 
-    // --- FIREBASE VERİ OKUMA / YAZMA ---
-
+    // --- FIREBASE PROMPT OKUMA / YAZMA ---
+    // Anonim kullanıcılar prompt kaydedemez/yükleyemez.
     async function loadPrompt() {
-        if (!userId) {
-             promptStatusEl.textContent = 'Oturum açık değil.';
-             aiSystemPromptEl.disabled = true;
-             savePromptBtnEl.disabled = true;
-             return;
+        // Anonim kullanıcılar için varsayılan prompt'u kullan
+        if (auth.currentUser?.isAnonymous) {
+            aiSystemPromptEl.disabled = true;
+            savePromptBtnEl.disabled = true;
+            promptStatusEl.textContent = 'Anonim kullanıcılar rol tanımı değiştiremez.';
+            return;
         }
-        aiSystemPromptEl.disabled = false; // Kullanıcının yazabilmesi için aktif et
-        savePromptBtnEl.disabled = false; // Kaydet butonunu aktif et
+
+        aiSystemPromptEl.disabled = false;
+        savePromptBtnEl.disabled = false;
         promptStatusEl.textContent = 'Talimat yükleniyor...';
+        
         try {
             const docRef = getPromptDocRef(userId);
             const promptDoc = await getDoc(docRef);
@@ -385,6 +438,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
                 aiSystemPromptEl.value = data.prompt || aiSystemPromptEl.placeholder;
                 promptStatusEl.textContent = 'Talimat başarıyla yüklendi.';
             } else {
+                // İlk defa giriş yapan üyeler için varsayılan prompt'u kaydet
                 await savePrompt(true); 
             }
         } catch (error) {
@@ -394,7 +448,8 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     }
 
     async function savePrompt(isInitialSave = false) {
-        if (!userId) return;
+        if (!userId || auth.currentUser.isAnonymous) return;
+
         if (!isInitialSave) {
             savePromptBtnEl.disabled = true;
             promptStatusEl.textContent = 'Kaydediliyor...';
@@ -415,11 +470,13 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
         }
     }
     
+    // --- SOHBETİ TEMİZLEME (Sadece Kullanıcının Kendi Mesajlarını Siler) ---
+
     async function clearChat() {
         if (!userId || isAILoading) return;
 
-        // confirm() yerine tarayıcı uyumlu bir modal/uyarı kullanılmalıdır (bu ortamda tarayıcının kendi confirm'i çalışmayabilir, ancak basitlik için bırakıldı)
-        if (!confirm("Sohbet geçmişini (veritabanı dahil) silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!")) {
+        // confirm() yerine custom modal kullanılması daha iyidir, ancak mevcut yapıyı koruyorum.
+        if (!confirm("SADECE kendi gönderdiğiniz mesajları (veritabanı dahil) silmek istediğinizden emin misiniz?")) {
             return;
         }
 
@@ -428,14 +485,16 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
         chatErrorEl.classList.add('hidden');
         
         try {
-            const chatCollectionRef = getChatCollectionRef(userId);
-            const querySnapshot = await getDocs(chatCollectionRef);
+            const chatCollectionRef = getChatCollectionRef();
+            // Yalnızca mevcut kullanıcı ID'sine sahip mesajları sorgula
+            const q = query(chatCollectionRef, where("uid", "==", userId));
+            const querySnapshot = await getDocs(q);
             
             for (const doc of querySnapshot.docs) {
                 await deleteDoc(doc.ref);
             }
             
-            console.log("Sohbet geçmişi başarıyla temizlendi.");
+            console.log(`Kullanıcı ${userId} için mesajlar başarıyla temizlendi.`);
             
         } catch (error) {
             console.error("Sohbeti temizleme hatası:", error);
@@ -449,12 +508,10 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
 
 
     function setupChatHistoryListener() {
-        if (!userId) {
-            chatHistoryEl.innerHTML = `<div class="text-center text-gray-400 italic p-4" id="initial-message">Oturum açık değil, sohbet geçmişi yüklenemiyor.</div>`;
-            return;
-        }
+        if (!userId) return;
 
-        const q = query(getChatCollectionRef(userId)); 
+        // Sohbetin herkes tarafından okunabilmesi için herkese açık koleksiyonu dinle
+        const q = query(getChatCollectionRef(), /*orderBy('timestamp')*/); // orderBy kullanmıyoruz
         
         const unsubscribe = onSnapshot(q, (snapshot) => {
             const newHistory = snapshot.docs.map(doc => ({
@@ -462,6 +519,7 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
                 ...doc.data()
             }));
             
+            // Veri çekildikten sonra istemci tarafında sıralama
             newHistory.sort((a, b) => {
                 const aTime = a.timestamp?.toMillis() || a.timestamp || 0;
                 const bTime = b.timestamp?.toMillis() || b.timestamp || 0;
@@ -480,24 +538,51 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
             setChatReadyState(false);
         });
 
-        return unsubscribe; // Dinleyiciyi kapatmak için kullanılır (örneğin çıkış yaparken)
+        return unsubscribe; 
     }
 
     // --- GEMINI API İŞLEMLERİ ---
+
+    // Geri çekilme (exponential backoff) mantığı
+    async function fetchWithRetry(url, options, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) {
+                    // API 4xx/5xx hata döndürürse ve son deneme değilse tekrar dene
+                    if (i < retries - 1) {
+                         // Geri çekilme bekleme süresi: 2^i * 1000 ms
+                        const delay = Math.pow(2, i) * 1000; 
+                        console.warn(`API çağrısı başarısız (${response.status}). ${delay}ms sonra tekrar deniyor...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        continue;
+                    }
+                    const errorData = await response.json();
+                    throw new Error(`API Hatası: ${response.status} - ${errorData.error?.message || response.statusText}`);
+                }
+                return response;
+            } catch (error) {
+                if (i === retries - 1) throw error; // Son denemede hata fırlat
+            }
+        }
+    }
+
 
     async function generateContent(userQuery) {
         setLoadingState(true);
         chatErrorEl.classList.add('hidden');
         
-        createMessageElement('', 'model', true); // Bekleyen yanıt balonu
+        createPendingElement(); // Bekleyen yanıt balonu
 
         const systemPrompt = aiSystemPromptEl.value.trim() || 'Sen kibar ve yardımcı bir yapay zeka asistanısısın.';
 
-        // Yalnızca son 10 mesajı al
-        const contents = chatHistory.slice(-10).map(msg => ({ 
-            role: msg.role === 'user' ? 'user' : 'model',
-            parts: [{ text: msg.text }]
-        }));
+        // Yalnızca son 10 mesajı (AI ve Kullanıcı) al
+        const contents = chatHistory.slice(-10)
+            .filter(msg => msg.role === 'user' || msg.role === 'model') // Yalnızca bu rollerdeki mesajları al
+            .map(msg => ({ 
+                role: msg.role === 'user' ? 'user' : 'model',
+                parts: [{ text: msg.text }]
+            }));
 
         contents.push({ role: 'user', parts: [{ text: userQuery }] });
 
@@ -510,62 +595,77 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
         const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
         let aiResponseText = "Üzgünüm, yanıt alınırken bir sorun oluştu.";
+        let success = false;
 
         try {
-            const response = await fetch(apiUrl, {
+            const response = await fetchWithRetry(apiUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`API Hatası: ${response.status} - ${errorData.error?.message || response.statusText}`);
-            }
-
             const result = await response.json();
             aiResponseText = result.candidates?.[0]?.content?.parts?.[0]?.text || aiResponseText;
+            success = true;
 
         } catch (error) {
             console.error("Gemini API çağrısında hata:", error);
             chatErrorEl.textContent = `Mesaj gönderilemedi: ${error.message}`;
             chatErrorEl.classList.remove('hidden');
             aiResponseText = "İletişim hatası. Lütfen konsolu kontrol edin.";
+            success = false;
         } finally {
             const pendingEl = document.getElementById('pending-ai-response');
             if (pendingEl) pendingEl.remove();
             
-            // Kullanıcı mesajı ve AI yanıtını veritabanına kaydet
-            await saveMessagesToDB(userQuery, aiResponseText);
+            // API çağrısı başarılı olsun veya olmasın, kullanıcı mesajını kaydet
+            await saveUserMessageToDB(userQuery);
+            
+            // Sadece API çağrısı başarılıysa AI yanıtını kaydet
+            if (success) {
+                await saveAIMessageToDB(aiResponseText);
+            } else {
+                 // Eğer AI yanıtı başarısızsa, kullanıcıya bir hata mesajı kaydet
+                 await saveAIMessageToDB(aiResponseText, true);
+            }
             
             setLoadingState(false);
         }
     }
 
-    async function saveMessagesToDB(userText, aiText) {
+    // Kullanıcı mesajını kaydetme
+    async function saveUserMessageToDB(userText) {
         if (!userId) return;
-        const chatCollectionRef = getChatCollectionRef(userId);
-        const userTime = Date.now();
-
+        const chatCollectionRef = getChatCollectionRef();
         try {
-            // Kullanıcı Mesajını Kaydet
-            await setDoc(doc(chatCollectionRef), {
+            await addDoc(chatCollectionRef, {
                 text: userText,
                 role: 'user',
-                timestamp: userTime 
+                uid: userId, // Sohbet herkese açık olsa da, mesajın kime ait olduğunu belirtiriz
+                timestamp: serverTimestamp()
             });
-
-            // AI Mesajını Kaydet (bir milisaniye sonra eklenerek sıralamada sonraya atılır)
-            await setDoc(doc(chatCollectionRef), {
-                text: aiText,
-                role: 'model',
-                timestamp: userTime + 1 
-            });
-            
         } catch (error) {
-            console.error("Mesajları Firestore'a kaydederken hata:", error);
+            console.error("Kullanıcı mesajını kaydederken hata:", error);
         }
     }
+    
+    // AI mesajını kaydetme
+    async function saveAIMessageToDB(aiText, isError = false) {
+        if (!userId) return;
+        const chatCollectionRef = getChatCollectionRef();
+        try {
+            await addDoc(chatCollectionRef, {
+                text: aiText,
+                role: 'model',
+                uid: 'gemini-ai-bot', // Sabit AI ID'si
+                timestamp: serverTimestamp(),
+                error: isError
+            });
+        } catch (error) {
+            console.error("AI mesajını kaydederken hata:", error);
+        }
+    }
+
     
     // --- MODAL YÖNETİMİ ---
     function openAuthModal(mode = 'login') {
@@ -581,6 +681,11 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
         authModalEl.classList.add('hidden');
         loginErrorEl.classList.add('hidden');
         registerErrorEl.classList.add('hidden');
+        loginEmailEl.value = '';
+        loginPasswordEl.value = '';
+        registerEmailEl.value = '';
+        registerPasswordEl.value = '';
+        registerPasswordConfirmEl.value = '';
     }
 
     function showLoginForm() {
@@ -603,51 +708,55 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
 
     // --- OTURUM YÖNETİMİ ---
 
-    let unsubscribeFromChatHistory = null; // Dinleyiciyi tutacak değişken
-
     function updateAuthUI(isLoggedIn, userEmail = 'Anonim Kullanıcı') {
         if (isLoggedIn) {
             authBtnEl.textContent = 'Çıkış Yap';
             authBtnEl.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
             authBtnEl.classList.add('bg-red-500', 'hover:bg-red-600');
             
+            const isAnonymous = auth.currentUser.isAnonymous;
+            
             authStatusEl.innerHTML = `
-                <span class="font-semibold text-green-700">**Giriş Başarılı:**</span>
-                <span class="text-gray-600">**Oturum Tipi:** ${userEmail.includes('@') ? 'Üye' : 'Anonim'} | **Kullanıcı ID:** ${userId.substring(0, 8) + '...'}</span>
+                <span class="font-semibold ${isAnonymous ? 'text-orange-700' : 'text-green-700'}">
+                    **Oturum:** ${isAnonymous ? 'Anonim' : 'Üye'} 
+                </span>
+                <span class="text-gray-600">
+                    | **Kullanıcı:** ${userEmail} | **ID:** ${userId.substring(0, 8) + '...'}
+                </span>
             `;
-            // Kullanıcı ID'sini konsola yazdırıyoruz.
             console.log("Mevcut Kullanıcı ID:", userId);
         } else {
             authBtnEl.textContent = 'Giriş Yap / Kayıt Ol'; 
             authBtnEl.classList.remove('bg-red-500', 'hover:bg-red-600');
             authBtnEl.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
-            authStatusEl.innerHTML = `<span class="font-semibold text-gray-500">Anonim olarak devam ediliyor. Lütfen giriş yapın.</span>`;
+            authStatusEl.innerHTML = `<span class="font-semibold text-gray-500">Oturum Açık Değil. Lütfen bekleyin.</span>`;
         }
     }
 
     authBtnEl.addEventListener('click', async () => {
-        // Anonim olmayan (yani e-posta/şifre ile giriş yapmış) bir kullanıcı varsa ÇIKIŞ YAP
-        if (auth.currentUser && auth.currentUser.isAnonymous === false) { 
+        if (!auth.currentUser) return; // Auth henüz hazır değilse bir şey yapma
+
+        // Üye (E-posta/Şifre) veya Özel Token ile giriş yapmış bir kullanıcıysa ÇIKIŞ YAP
+        if (!auth.currentUser.isAnonymous) { 
             try {
                 await signOut(auth);
                 closeAuthModal();
             } catch (error) {
                 console.error("Çıkış yapma hatası:", error);
             }
-        } else { // Anonim ise veya hiç oturum yoksa modalı aç
+        } else { // Anonim ise modalı aç
             openAuthModal();
         }
     });
 
-    closeModalBtn.addEventListener('click', closeAuthModal);
-    modalLoginTab.addEventListener('click', showLoginForm);
-    modalRegisterTab.addEventListener('click', showRegisterForm);
 
+    // --- KİMLİK DOĞRULAMA İŞLEMLERİ ---
+    
     loginBtnEl.addEventListener('click', async () => {
         loginErrorEl.classList.add('hidden');
         const email = loginEmailEl.value.trim();
         const password = loginPasswordEl.value.trim();
-
+        
         if (!email || !password) {
             loginErrorEl.textContent = "E-posta ve şifre boş bırakılamaz.";
             loginErrorEl.classList.remove('hidden');
@@ -658,10 +767,15 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
             loginBtnEl.textContent = "Giriş Yapılıyor...";
             loginBtnEl.disabled = true;
             await signInWithEmailAndPassword(auth, email, password);
-            // Başarılı olursa onAuthStateChanged tetiklenir ve modal kapanır
+            closeAuthModal(); // Başarılıysa modalı kapat
         } catch (error) {
             console.error("Giriş hatası:", error);
-            loginErrorEl.textContent = "Giriş başarısız: " + error.message;
+            let errorMessage = "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.";
+            if (error.code === 'auth/invalid-email') errorMessage = 'Geçersiz e-posta formatı.';
+            if (error.code === 'auth/wrong-password') errorMessage = 'Şifre hatalı.';
+            if (error.code === 'auth/user-not-found') errorMessage = 'Bu e-posta ile kayıtlı kullanıcı bulunamadı.';
+
+            loginErrorEl.textContent = errorMessage;
             loginErrorEl.classList.remove('hidden');
         } finally {
              loginBtnEl.textContent = "Giriş Yap";
@@ -695,10 +809,15 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
             registerBtnEl.textContent = "Kayıt Olunuyor...";
             registerBtnEl.disabled = true;
             await createUserWithEmailAndPassword(auth, email, password);
-            // Başarılı olursa onAuthStateChanged tetiklenir ve modal kapanır
+            closeAuthModal(); // Başarılıysa modalı kapat
         } catch (error) {
             console.error("Kayıt olma hatası:", error);
-            registerErrorEl.textContent = "Kayıt başarısız: " + error.message;
+            let errorMessage = "Kayıt başarısız. Lütfen tekrar deneyin.";
+            if (error.code === 'auth/email-already-in-use') errorMessage = 'Bu e-posta zaten kayıtlı.';
+            if (error.code === 'auth/invalid-email') errorMessage = 'Geçersiz e-posta formatı.';
+            if (error.code === 'auth/weak-password') errorMessage = 'Şifre en az 6 karakter olmalıdır.';
+
+            registerErrorEl.textContent = errorMessage;
             registerErrorEl.classList.remove('hidden');
         } finally {
              registerBtnEl.textContent = "Kayıt Ol";
@@ -707,40 +826,50 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
     });
 
 
+    // --- TEMEL BAŞLATMA VE OTURUM İZLEME ---
+    
     onAuthStateChanged(auth, async (user) => {
         if (unsubscribeFromChatHistory) {
-            unsubscribeFromChatHistory(); // Önceki dinleyiciyi kapat
+            unsubscribeFromChatHistory(); 
             unsubscribeFromChatHistory = null;
         }
-
+        
         if (user) {
-            // Kullanıcının e-postası varsa üye oturumu, yoksa (isAnonymous true ise) anonim oturum.
-            const userEmail = user.isAnonymous ? 'Anonim Kullanıcı' : user.email || user.uid;
+            // Başarılı oturum açma (Anonim, Üye veya Token ile)
             userId = user.uid;
+            const userEmail = user.isAnonymous ? 'Anonim' : user.email || user.uid;
+            
             updateAuthUI(true, userEmail);
-            setChatReadyState(false); // Veri yüklenene kadar bekle
-            closeAuthModal(); // Oturum açıldıysa modalı kapat
+            setChatReadyState(false); 
+            
+            // Kullanıcı üye ise (anonim değilse) prompt'u yükle
+            if (!user.isAnonymous) {
+                await loadPrompt(); 
+            } else {
+                // Anonim kullanıcılar için prompt alanı devre dışı
+                aiSystemPromptEl.disabled = true;
+                savePromptBtnEl.disabled = true;
+                promptStatusEl.textContent = 'Anonim kullanıcılar rol tanımı değiştiremez.';
+            }
 
-            await loadPrompt(); 
-            unsubscribeFromChatHistory = setupChatHistoryListener(); // Yeni dinleyiciyi başlat
+            unsubscribeFromChatHistory = setupChatHistoryListener(); // Sohbeti dinlemeye başla
             
         } else {
-            // Çıkış yapıldı veya ilk kez yükleniyor.
+            // Oturum Kapalı
             userId = null;
             updateAuthUI(false);
             setChatReadyState(false);
             
             try {
-                // Eğer Canvas ortamındaysa, özel token ile veya anonim giriş yap
+                // TOKEN VEYA ANONİM GİRİŞ ZORLAMASI
                 if (initialAuthToken) {
                     await signInWithCustomToken(auth, initialAuthToken);
                 } else {
                     await signInAnonymously(auth);
                 }
             } catch (error) {
-                console.error("Oturum açma hatası:", error);
-                authStatusEl.innerHTML = '<span class="text-red-500 font-bold">**GİRİŞ HATASI:** Oturum Açılamadı!</span>';
-                document.getElementById('initial-message').textContent = 'Oturum açılamadığı için sohbet devre dışı.';
+                console.error("İlk Oturum Açma Hatası:", error);
+                displayError("Uygulama başlatılırken kritik oturum açma hatası. Lütfen konsolu kontrol edin.");
                 setChatReadyState(false);
             }
         }
@@ -765,6 +894,9 @@ Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samim
 
     savePromptBtnEl.addEventListener('click', savePrompt);
     clearChatBtnEl.addEventListener('click', clearChat);
+    closeModalBtn.addEventListener('click', closeAuthModal);
+    modalLoginTab.addEventListener('click', showLoginForm);
+    modalRegisterTab.addEventListener('click', showRegisterForm);
 
 </script>
 </body>
