@@ -65,9 +65,9 @@
                 <!-- SİSTEM TALİMATI BÖLÜMÜ -->
                 <div class="space-y-3 p-4 border border-gray-200 rounded-lg shadow-sm">
                     <h2 class="text-xl font-semibold text-gray-700">⚙️ AI Talimatı</h2>
-                    <textarea id="instruction-textarea" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-sm" 
-                        placeholder="AI'ın nasıl davranması gerektiğini buraya yazın."></textarea>
-                    <button id="instruction-update-btn" class="w-full px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition duration-150">Talimatı Güncelle & Kaydet</button>
+                    <textarea id="instruction-textarea" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-sm disabled:bg-gray-100" 
+                        placeholder="AI'ın nasıl davranması gerektiğini buraya yazın." disabled></textarea>
+                    <button id="instruction-update-btn" class="w-full px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition duration-150 disabled:bg-purple-300" disabled>Talimatı Güncelle & Kaydet</button>
                     <p id="instruction-status" class="text-sm text-center text-gray-500"></p>
                 </div>
 
@@ -98,7 +98,7 @@
 
                 <!-- Giriş Alanı ve Düğme -->
                 <div class="flex space-x-3">
-                    <input type="text" id="user-input" placeholder="Mesajınızı buraya yazın..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100" disabled>
+                    <input type="text" id="user-input" placeholder="Mesajınızı buraya yazın..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100">
                     <button id="send-btn" class="px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-150 disabled:bg-blue-300" disabled>Gönder</button>
                 </div>
                 
@@ -124,8 +124,10 @@
     <!-- Firebase Kütüphaneleri -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection, query, getDocs, deleteDoc, serverTimestamp, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // setLogLevel('debug'); // Firestore ve Auth hatalarını görmek için
 
         // Global Değişkenler
         let db;
@@ -135,13 +137,23 @@
         const DEFAULT_SYSTEM_INSTRUCTION = "Sen yardımcı ve kibar bir yapay zeka asistanısın. Türkçe olarak yanıt ver. Yanıtlarını kibar ve samimi bir tonda tut.";
         const APP_ID = 'github-static-chat-app'; 
         
-        // Canvas ortam değişkenlerini simüle etmek için (GitHub'da sizin belirlemeniz gerekir)
-        const __firebase_config = "{}"; // Bu, Canvas'ta otomatik sağlanır, GitHub'da manuel ayarlanır.
-        const __initial_auth_token = undefined; // Canvas'ta otomatik sağlanır. GitHub'da anonim/manuel.
-        // GitHub Pages'de API anahtarını doğrudan gömmek risklidir. Ancak, statik bir sayfa olduğundan başka seçenek yoktur.
-        // PRATİK ÇÖZÜM: Kullanıcıdan al, ama burada doğrudan gömüyoruz.
-        const GEMINI_API_KEY = "GEMINI_API_KEY_HERE"; // LÜTFEN BUNU GERÇEK ANAHTARINIZLA DEĞİŞTİRİN!
+        // =========================================================================
+        // ZORUNLU YAPILANDIRMA (LÜTFEN DEĞİŞTİRİN!)
+        // =========================================================================
+        
+        // 1. GEMINI API KEY (GitHub Pages'de güvenlik riski taşıdığını unutmayın)
+        const GEMINI_API_KEY = "GEMINI_API_KEY_HERE"; // <<< BURAYA KENDİ GEMINI API KEY'İNİZİ YAZIN!
 
+        // 2. FIREBASE CONFIG (Firebase Projenizden Alın)
+        const firebaseConfig = {
+            apiKey: "YOUR_FIREBASE_API_KEY", // <<< BURAYA KENDİ FIREBASE API KEY'İNİZİ YAZIN!
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "SENDER_ID",
+            appId: "APP_ID"
+        };
+        
         // =========================================================================
         // YARDIMCI FONKSİYONLAR
         // =========================================================================
@@ -163,10 +175,12 @@
 
         /**
          * Firestore için belge yolunu oluşturur (Kullanıcıya özel)
+         * Anonim kullanıcılar için geçmiş kaydetmiyoruz.
          * @param {string} collectionName 
          * @returns {string}
          */
         function getUserDocPath(collectionName) {
+            if (!currentUserId || currentUserId.startsWith("anon")) return null;
             return `artifacts/${APP_ID}/users/${currentUserId}/${collectionName}/data`;
         }
 
@@ -243,35 +257,29 @@
          */
         function initFirebase() {
             try {
-                // Firebase Config (LÜTFEN GERÇEK CONFIG İLE DEĞİŞTİRİN)
-                // Bu config'i Firebase projenizin "Web uygulamasına" ekleyin.
-                const firebaseConfig = {
-                    apiKey: "YOUR_FIREBASE_API_KEY", // Örneğin: "AIzaSyC..."
-                    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-                    projectId: "YOUR_PROJECT_ID",
-                    storageBucket: "YOUR_PROJECT_ID.appspot.com",
-                    messagingSenderId: "SENDER_ID",
-                    appId: "APP_ID"
-                };
+                // Konfigürasyon kontrolü
+                if (firebaseConfig.apiKey === "YOUR_FIREBASE_API_KEY") {
+                    document.getElementById('auth-status').innerHTML = '<span class="text-red-500">❌ Firebase Yapılandırma Hatası: Lütfen `firebaseConfig` içindeki bilgileri doldurun.</span>';
+                    return;
+                }
 
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                // Anonim Giriş veya Token Girişi
                 onAuthStateChanged(auth, async (user) => {
+                    const statusText = document.getElementById('auth-status');
+                    
                     if (user) {
                         currentUserId = user.uid;
-                        // Kullanıcı rolünü Firestore'dan yükle
                         await loadUserProfile(currentUserId);
-                        // Sohbet geçmişini dinlemeye başla
+                        // Anonim kullanıcılar için chat dinleyicisini kurma
                         setupChatListener();
                     } else {
-                        // Anonim Giriş
-                        const statusText = document.getElementById('auth-status');
+                        // Kullanıcı yoksa anonim giriş yap
                         statusText.textContent = "Anonim olarak giriş yapılıyor...";
                         await signInAnonymously(auth);
-                        // Anonim kullanıcılar için UID alınıp, rol "anon" olarak kalacak.
+                        // onAuthStateChanged tekrar çağrılacak ve Anonim kullanıcıyı işleyecek
                     }
                 });
             } catch (error) {
@@ -291,23 +299,27 @@
                 const docSnap = await getDoc(profileDocRef);
                 const statusText = document.getElementById('auth-status');
                 
-                if (docSnap.exists()) {
+                // Anonim kullanıcılar (auth.currentUser.isAnonymous) veya yeni kayıtlı kullanıcılar için
+                if (docSnap.exists() && !auth.currentUser.isAnonymous) {
                     const data = docSnap.data();
                     userRole = data.role || "user";
                     document.getElementById('instruction-textarea').value = data.system_instruction || DEFAULT_SYSTEM_INSTRUCTION;
                     
                     statusText.innerHTML = `✅ **Giriş Başarılı.** Kullanıcı: **${auth.currentUser.email || 'Anonim'}** (${userRole.toUpperCase()}) | UID: \`${uid}\``;
-                } else {
-                    // Yeni kullanıcı veya anonim kullanıcı
-                    userRole = uid.startsWith("anon") ? "anon" : "user";
-                    // Varsayılan profili kaydet
-                    await setDoc(profileDocRef, { 
-                        role: userRole, 
-                        system_instruction: DEFAULT_SYSTEM_INSTRUCTION 
-                    }, { merge: true });
-                    
+                } else if (auth.currentUser.isAnonymous) {
+                    userRole = "anon";
                     document.getElementById('instruction-textarea').value = DEFAULT_SYSTEM_INSTRUCTION;
                     statusText.innerHTML = `✅ **Anonim Giriş.** Rol: **${userRole.toUpperCase()}** | UID: \`${uid}\``;
+                } else {
+                    // İlk kez giriş yapan (kayıt olan) kullanıcılar için varsayılan profil
+                    userRole = "user";
+                    await setDoc(profileDocRef, { 
+                        role: userRole, 
+                        system_instruction: DEFAULT_SYSTEM_INSTRUCTION,
+                        email: auth.currentUser.email || 'N/A'
+                    }, { merge: true });
+                    document.getElementById('instruction-textarea').value = DEFAULT_SYSTEM_INSTRUCTION;
+                    statusText.innerHTML = `✅ **Giriş Başarılı.** Kullanıcı: **${auth.currentUser.email}** (${userRole.toUpperCase()}) | UID: \`${uid}\``;
                 }
                 
                 updateUIVisibility();
@@ -323,34 +335,26 @@
          * Firestore üzerinden sohbet geçmişini gerçek zamanlı dinler.
          */
         function setupChatListener() {
-            if (!currentUserId || currentUserId.startsWith("anon")) {
+            // Anonim kullanıcılar için dinleyici kurmaya gerek yok, geçmiş kaydetmiyoruz.
+            if (!currentUserId || currentUserId.startsWith("anon") || auth.currentUser.isAnonymous) {
                 renderChatHistory([]);
+                updateUIVisibility();
                 return;
             }
             
-            const chatDocRef = doc(db, getUserDocPath('chat'));
+            const chatDocPath = getUserDocPath('chat');
+            if (!chatDocPath) return;
+
+            const chatDocRef = doc(db, chatDocPath);
 
             // Firestore'da dinleyici kurma
             onSnapshot(chatDocRef, (docSnap) => {
-                const historyDiv = document.getElementById('chat-history');
-                const adminHistoryDiv = document.getElementById('admin-chat-history');
                 
-                // Önceki yükleme mesajını kaldır
-                if (historyDiv.querySelector('.h-full')) historyDiv.innerHTML = ''; 
-
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     // Gemini API'ye uygun formata dönüştür
                     const geminiHistory = firestoreToGeminiHistory(data.messages || []);
                     renderChatHistory(geminiHistory);
-                    
-                    // Admin/Mod görünümü için (kendisi olduğu durumda)
-                    if (userRole === 'admin' || userRole === 'mod') {
-                        const selectedUser = document.getElementById('user-id-select').value;
-                        if (!selectedUser || selectedUser === currentUserId) {
-                             adminHistoryDiv.innerHTML = 'Kendi sohbet geçmişiniz, ana panelde gösteriliyor.';
-                        }
-                    }
                     
                 } else {
                     renderChatHistory([]); // Belge yoksa boş göster
@@ -371,9 +375,10 @@
          * @param {Array<Object>} newGeminiHistory 
          */
         async function saveChatHistory(newGeminiHistory) {
-             if (!currentUserId || currentUserId.startsWith("anon")) return;
+             const chatDocPath = getUserDocPath('chat');
+             if (!chatDocPath) return; // Anonim ise kaydetme
 
-             const chatDocRef = doc(db, getUserDocPath('chat'));
+             const chatDocRef = doc(db, chatDocPath);
              
              // Gemini formatını (role, text) dizisine dönüştür
              const firestoreMessages = newGeminiHistory.map(msg => [
@@ -382,7 +387,7 @@
              ]);
              
              try {
-                 await setDoc(chatDocRef, { messages: firestoreMessages }, { merge: true });
+                 await setDoc(chatDocRef, { messages: firestoreMessages, updatedAt: serverTimestamp() }, { merge: true });
              } catch (error) {
                  console.error("Sohbet kaydedilirken hata:", error);
                  showModal("Kaydetme Hatası", `Sohbet geçmişi kaydedilemedi: ${error.message}`);
@@ -390,64 +395,60 @@
         }
         
         // =========================================================================
-        // KİMLİK DOĞRULAMA (SIMÜLASYON) VE ROL İŞLEMLERİ
+        // KİMLİK DOĞRULAMA (GERÇEK FIREBASE AUTH) İŞLEMLERİ
         // =========================================================================
         
         /**
-         * Simüle edilmiş giriş/kayıt işlemi.
-         * @param {boolean} isRegister 
+         * Giriş İşlemi
          */
-        async function handleAuth(isRegister) {
+        document.getElementById('login-btn').addEventListener('click', async () => {
             const email = document.getElementById('email-input').value.trim();
             const password = document.getElementById('password-input').value;
             const authMessage = document.getElementById('auth-message');
             authMessage.textContent = '';
             
-            if (!email || !password || password.length < 6) {
-                authMessage.textContent = "E-posta ve en az 6 karakterli şifre girin.";
+            if (!email || !password) {
+                authMessage.textContent = "E-posta ve şifre girin.";
                 return;
             }
-            
-            const newUserId = email.split('@')[0].replace('.', '_');
-            const initialRole = (email.endsWith('@example.com') && email.startsWith('admin')) ? 'admin' : 
-                                (email.endsWith('@example.com') && email.startsWith('mod')) ? 'mod' : 'user';
 
-            const profileDocRef = doc(db, `artifacts/${APP_ID}/users/${newUserId}/profile/data`);
-            
             try {
-                // Firebase kimlik doğrulama yerine, özel bir "token" ile giriş simüle ediyoruz.
-                // Gerçek bir uygulamada, Firebase Auth'u kullanmanız gerekir.
-                const customToken = btoa(newUserId); // Basit bir token simülasyonu
-                await signOut(auth); // Mevcut oturumu kapat
-                await signInWithCustomToken(auth, customToken);
-                
-                if (isRegister) {
-                    await setDoc(profileDocRef, { 
-                        role: initialRole, 
-                        email: email,
-                        created_at: serverTimestamp(),
-                        system_instruction: DEFAULT_SYSTEM_INSTRUCTION
-                    }, { merge: true });
-                    authMessage.textContent = "Kayıt başarılı! Giriş yapıldı.";
-                } else {
-                    // Girişte rol kontrolü yapıldı (loadUserProfile içinde)
-                    authMessage.textContent = "Giriş başarılı!";
-                }
-                
+                await signInWithEmailAndPassword(auth, email, password);
+                // onAuthStateChanged listener'ı kalan işleri halledecek
             } catch (error) {
-                console.error("Giriş/Kayıt hatası:", error);
-                authMessage.textContent = `Giriş/Kayıt başarısız: ${error.message}`;
+                console.error("Giriş hatası:", error);
+                authMessage.textContent = `Giriş başarısız: ${error.message}`;
             }
-        }
+        });
 
-        document.getElementById('login-btn').addEventListener('click', () => handleAuth(false));
-        document.getElementById('register-btn').addEventListener('click', () => handleAuth(true));
+        /**
+         * Kayıt İşlemi
+         */
+        document.getElementById('register-btn').addEventListener('click', async () => {
+            const email = document.getElementById('email-input').value.trim();
+            const password = document.getElementById('password-input').value;
+            const authMessage = document.getElementById('auth-message');
+            authMessage.textContent = '';
+            
+            if (!email || password.length < 6) {
+                authMessage.textContent = "Geçerli bir e-posta ve en az 6 karakterli şifre girin.";
+                return;
+            }
+
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                // Yeni kullanıcı kaydedildi, profileDoc'a rol kaydı loadUserProfile içinde yapılacak
+                authMessage.textContent = "Kayıt başarılı! Otomatik giriş yapıldı.";
+            } catch (error) {
+                console.error("Kayıt hatası:", error);
+                authMessage.textContent = `Kayıt başarısız: ${error.message}`;
+            }
+        });
         
         document.getElementById('logout-btn').addEventListener('click', async () => {
             try {
                 await signOut(auth);
-                // Anonim olarak yeniden giriş onAuthStateChanged tarafından otomatik olarak yapılır
-                updateUIVisibility(true);
+                // UI temizliği ve anonim giriş onAuthStateChanged tarafından halledilir
             } catch (error) {
                 console.error("Çıkış hatası:", error);
                 showModal("Hata", `Çıkış yapılırken sorun oluştu: ${error.message}`);
@@ -455,79 +456,18 @@
         });
         
         // =========================================================================
-        // MODERATÖR/YÖNETİCİ İŞLEMLERİ
+        // MODERATÖR/YÖNETİCİ İŞLEMLERİ (BASİT İSKELET)
         // =========================================================================
         
         /**
-         * Firestore'dan tüm kullanıcı ID'lerini çeker.
+         * Sadece yönetici/moderatör için UI görünürlüğünü güncelleyen fonksiyon
          */
         async function loadAllUserIds() {
-            const usersCollectionRef = collection(db, `artifacts/${APP_ID}/users`);
-            const selectElement = document.getElementById('user-id-select');
-            selectElement.innerHTML = '<option value="">-- Kullanıcı Seç --</option>';
-
-            try {
-                const querySnapshot = await getDocs(usersCollectionRef);
-                querySnapshot.forEach((doc) => {
-                    const uid = doc.id;
-                    const option = document.createElement('option');
-                    option.value = uid;
-                    option.textContent = uid;
-                    selectElement.appendChild(option);
-                });
-            } catch (error) {
-                 console.error("Kullanıcı ID'leri yüklenirken hata:", error);
-            }
+            // (Bu kısım şu an için sadece görsel iskelet olarak kalacak.
+            //  Tüm kullanıcıları getirmek için güvenlik kuralları ayarlanmalıdır.)
+            const adminModSection = document.getElementById('admin-mod-section');
+            adminModSection.classList.add('hidden'); // Geçici olarak gizle
         }
-        
-        /**
-         * Seçilen kullanıcının sohbet geçmişini görüntüler.
-         */
-        document.getElementById('user-id-select').addEventListener('change', async (e) => {
-            const selectedUid = e.target.value;
-            const adminHistoryDiv = document.getElementById('admin-chat-history');
-            adminHistoryDiv.innerHTML = '<div class="text-center text-blue-500">Yükleniyor...</div>';
-            
-            if (!selectedUid) {
-                adminHistoryDiv.innerHTML = 'Lütfen bir kullanıcı seçin.';
-                return;
-            }
-            
-            if (selectedUid === currentUserId) {
-                 adminHistoryDiv.innerHTML = 'Kendi sohbet geçmişiniz, ana panelde gösteriliyor.';
-                 return;
-            }
-            
-            const chatDocRef = doc(db, `artifacts/${APP_ID}/users/${selectedUid}/chat/history`);
-            
-            try {
-                const docSnap = await getDoc(chatDocRef);
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    const firestoreHistory = data.messages || [];
-                    const geminiHistory = firestoreToGeminiHistory(firestoreHistory);
-                    
-                    let htmlContent = '';
-                    for (let i = 0; i < geminiHistory.length; i += 2) {
-                        const userMsg = geminiHistory[i];
-                        const modelMsg = geminiHistory[i + 1];
-
-                        if (userMsg && userMsg.role === 'user') {
-                            htmlContent += `<p class="font-bold text-gray-700 mt-2">Kullanıcı (${selectedUid}):</p><p class="p-2 bg-gray-100 rounded">${userMsg.parts[0].text}</p>`;
-                        }
-                        if (modelMsg && modelMsg.role === 'model') {
-                            htmlContent += `<p class="font-bold text-blue-700 mt-2">AI Asistanı:</p><p class="p-2 bg-blue-50 rounded">${modelMsg.parts[0].text}</p>`;
-                        }
-                    }
-                    adminHistoryDiv.innerHTML = htmlContent || 'Sohbet geçmişi boş.';
-                } else {
-                    adminHistoryDiv.innerHTML = 'Seçilen kullanıcının sohbet geçmişi bulunamadı.';
-                }
-            } catch (error) {
-                console.error("Admin geçmiş yükleme hatası:", error);
-                adminHistoryDiv.innerHTML = `Hata: ${error.message}`;
-            }
-        });
         
         // =========================================================================
         // SOHBET İŞLEMLERİ VE GEMINI API
@@ -540,7 +480,7 @@
             const newInstruction = document.getElementById('instruction-textarea').value.trim();
             const instructionStatus = document.getElementById('instruction-status');
             
-            if (!currentUserId || currentUserId.startsWith("anon")) {
+            if (userRole === "anon" || auth.currentUser.isAnonymous) {
                  instructionStatus.textContent = "Anonim kullanıcılar talimatı kaydedemez.";
                  return;
             }
@@ -548,7 +488,7 @@
             const profileDocRef = doc(db, `artifacts/${APP_ID}/users/${currentUserId}/profile/data`);
             
             try {
-                await setDoc(profileDocRef, { system_instruction: newInstruction }, { merge: true });
+                await setDoc(profileDocRef, { system_instruction: newInstruction, updatedAt: serverTimestamp() }, { merge: true });
                 instructionStatus.textContent = "✅ Talimat başarıyla kaydedildi!";
             } catch (error) {
                  console.error("Talimat kaydedilirken hata:", error);
@@ -560,13 +500,16 @@
          * Sohbeti temizler (Veritabanından siler).
          */
         document.getElementById('clear-chat-btn').addEventListener('click', async () => {
-            if (!currentUserId || currentUserId.startsWith("anon")) {
-                showModal("Uyarı", "Anonim kullanıcıların geçmişi tarayıcıya kaydedilmez.");
+            if (userRole === "anon" || auth.currentUser.isAnonymous) {
+                showModal("Bilgi", "Anonim kullanıcıların geçmişi tarayıcıya kaydedilmez. Görsel olarak temizlendi.");
                 document.getElementById('chat-history').innerHTML = '<div class="flex justify-center items-center h-full"><span class="text-gray-500">Sohbet geçmişi temizlendi.</span></div>';
                 return;
             }
             
-            const chatDocRef = doc(db, getUserDocPath('chat'));
+            const chatDocPath = getUserDocPath('chat');
+            if (!chatDocPath) return;
+
+            const chatDocRef = doc(db, chatDocPath);
             try {
                 await deleteDoc(chatDocRef);
                 showModal("Başarılı", "Sohbet geçmişiniz veritabanından başarıyla silindi.");
@@ -593,18 +536,24 @@
             loadingIndicator.classList.remove('hidden');
             sendButton.disabled = true;
 
-            // 1. Mevcut Geçmişi Yükle
             let currentHistory = [];
-            const chatDocRef = doc(db, getUserDocPath('chat'));
+            const chatDocPath = getUserDocPath('chat');
             
-            try {
-                const docSnap = await getDoc(chatDocRef);
-                if (docSnap.exists()) {
-                    currentHistory = firestoreToGeminiHistory(docSnap.data().messages || []);
+            // 1. Kayıtlı kullanıcılar için mevcut geçmişi yükle
+            if (chatDocPath) {
+                const chatDocRef = doc(db, chatDocPath);
+                try {
+                    const docSnap = await getDoc(chatDocRef);
+                    if (docSnap.exists()) {
+                        currentHistory = firestoreToGeminiHistory(docSnap.data().messages || []);
+                    }
+                } catch (error) {
+                     console.warn("Geçmiş yüklenemedi:", error);
                 }
-            } catch (error) {
-                 // Hata durumunda boş geçmişle devam et
-                 console.warn("Geçmiş yüklenemedi, sıfırdan başlıyor:", error);
+            } else {
+                 // Anonim kullanıcılar için sadece son mesajı kullan (geçmişi dikkate almadan)
+                 // Daha karmaşık mantık isterseniz, geçmişi localStorage'da tutmalısınız.
+                 // Şimdilik sadece tek turn (tek soru-cevap) destekliyoruz.
             }
             
             // 2. Yeni Kullanıcı Mesajını Ekle
@@ -655,15 +604,24 @@
                     }
                     responseText += sources;
                     
-                    // 3. Yeni Model Mesajını Ekle ve Kaydet
+                    // 3. Yeni Model Mesajını Ekle ve Kaydet/Görüntüle
                     currentHistory.push({ role: "model", parts: [{ text: responseText }] });
-                    await saveChatHistory(currentHistory); // Dinleyici UI'ı güncelleyecek
+                    
+                    if (chatDocPath) {
+                        // Kayıtlı kullanıcı için kaydet
+                        await saveChatHistory(currentHistory); 
+                    } else {
+                        // Anonim kullanıcı için sadece göster
+                        renderChatHistory(currentHistory);
+                    }
                     
                 } else if (result.promptFeedback?.blockReason) {
                      responseText = `Mesajınız politikalar nedeniyle engellendi. Neden: ${result.promptFeedback.blockReason}`;
                      showModal("Engelleme", responseText);
-                     // Sadece kullanıcı mesajını kaydet (opsiyonel)
-                     await saveChatHistory(currentHistory);
+                     if (chatDocPath) {
+                        // Engellenen mesajı da kaydet
+                        await saveChatHistory(currentHistory);
+                     }
                 } else {
                     responseText = "API'den beklenen formatta yanıt alınamadı. (Boş yanıt)";
                     showModal("API Hatası", responseText);
@@ -688,17 +646,9 @@
 
             if (!message) return;
             
-            // Eğer anonim kullanıcı iseniz, sadece mesajı gönderin (kaydetmeyin)
-            if (currentUserId && currentUserId.startsWith("anon")) {
-                 await callGemini(message);
-            } else if (currentUserId) {
-                 // Kayıtlı kullanıcılar için veritabanı kaydı yapılır (callGemini içinde)
-                 await callGemini(message);
-            } else {
-                 showModal("Hata", "Kullanıcı durumu belirlenemedi. Lütfen sayfayı yenileyin.");
-                 return;
-            }
-
+            // Anonim veya kayıtlı olsun, API'yi çağır
+            await callGemini(message);
+            
             userInput.value = '';
         }
 
@@ -715,21 +665,31 @@
 
         /**
          * Kullanıcı rolüne ve giriş durumuna göre UI bileşenlerini günceller.
-         * @param {boolean} isLogout Çıkış yapıldığında
          */
-        function updateUIVisibility(isLogout = false) {
+        function updateUIVisibility() {
             const isLoggedIn = !!auth.currentUser && !auth.currentUser.isAnonymous;
+            const isAnon = !!auth.currentUser && auth.currentUser.isAnonymous;
+            
             const authSection = document.getElementById('auth-section');
             const logoutSection = document.getElementById('logout-section');
             const adminModSection = document.getElementById('admin-mod-section');
             const userInfo = document.getElementById('user-info');
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
+            const instructionTextarea = document.getElementById('instruction-textarea');
+            const instructionUpdateBtn = document.getElementById('instruction-update-btn');
             const apiWarning = document.getElementById('api-warning');
             
+            // 3. Sohbet Kutusu Açık Değil Düzeltmesi
+            const canChat = (GEMINI_API_KEY !== "GEMINI_API_KEY_HERE" && !!GEMINI_API_KEY) && !!currentUserId;
+            userInput.disabled = !canChat;
+            sendBtn.disabled = !canChat;
+
             // API Anahtarı Kontrolü
             if (GEMINI_API_KEY === "GEMINI_API_KEY_HERE" || !GEMINI_API_KEY) {
                 apiWarning.classList.remove('hidden');
+                userInput.disabled = true;
+                sendBtn.disabled = true;
             } else {
                 apiWarning.classList.add('hidden');
             }
@@ -739,28 +699,33 @@
                 authSection.classList.add('hidden');
                 logoutSection.classList.remove('hidden');
                 userInfo.innerHTML = `**Rol:** ${userRole.toUpperCase()}<br>**UID:** \`${currentUserId}\`<br>**E-posta:** ${auth.currentUser.email}`;
-            } else {
+            } else if (isAnon) {
                 authSection.classList.remove('hidden');
                 logoutSection.classList.add('hidden');
-                userInfo.textContent = '';
+            } else {
+                 // Henüz oturum açma durumu belirlenmedi
+                authSection.classList.remove('hidden');
+                logoutSection.classList.add('hidden');
             }
 
-            // Chat Arayüzü Durumu
-            const canChat = (GEMINI_API_KEY !== "GEMINI_API_KEY_HERE" && !!GEMINI_API_KEY);
-            userInput.disabled = !canChat;
-            sendBtn.disabled = !canChat;
+            // 2. Anonim olanlar talimat gönderemez Düzeltmesi
+            const canEditInstruction = isLoggedIn && (userRole === 'user' || userRole === 'admin' || userRole === 'mod');
+            instructionTextarea.disabled = !canEditInstruction;
+            instructionUpdateBtn.disabled = !canEditInstruction;
             
+            if (isAnon) {
+                 document.getElementById('instruction-status').textContent = "Anonim kullanıcılar talimatı değiştiremez.";
+            } else if (isLoggedIn) {
+                 document.getElementById('instruction-status').textContent = "";
+            }
+
+
             // Admin/Mod Bölümleri
             if (userRole === 'admin' || userRole === 'mod') {
                 adminModSection.classList.remove('hidden');
                 loadAllUserIds();
             } else {
                 adminModSection.classList.add('hidden');
-            }
-            
-            // Çıkış yapıldığında, sohbeti temizle
-            if (isLogout) {
-                document.getElementById('chat-history').innerHTML = '<div class="flex justify-center items-center h-full"><span class="text-gray-500">Lütfen giriş yapın veya anonim olarak devam edin.</span></div>';
             }
         }
 
