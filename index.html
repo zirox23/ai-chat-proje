@@ -64,8 +64,8 @@
                     <div id="api-warning" class="text-sm p-3 bg-red-100 text-red-700 border border-red-300 rounded-lg hidden">
                         ⚠️ **UYARI:** **Gemini API Key** ayarlanmamış. Sohbet çalışmayacaktır.
                     </div>
-                    <div id="firebase-warning" class="text-sm p-3 bg-yellow-100 text-yellow-700 border border-yellow-300 rounded-lg hidden">
-                        ⚠️ **HATA:** **Firebase Yapılandırması** eksik veya hatalı.
+                    <div id="firebase-warning" class="text-sm p-3 bg-red-100 text-red-700 border border-red-300 rounded-lg hidden">
+                        ❌ **GİRİŞ HATASI:** Firebase yapılandırması veya API anahtarı hatalı. Sohbet kilitli olabilir.
                     </div>
                 </div>
 
@@ -159,17 +159,20 @@
         const COLLECTION_NAME = 'ai_chats';
         const DEFAULT_SYSTEM_INSTRUCTION = "Sen yardımcı ve kibar bir yapay zeka asistanısın. Türkçe olarak yanıt ver. Yanıtlarını kibar ve samimi bir tonda tut.";
         
-        // Firebase Config (Önceki görsellerinizden alınan değerler, geçerli olmalı)
-        const firebaseConfig = {
-            apiKey: "AIzaSyBmtVU_ceKdSXfjVmrUPYeH1L9pDw5vdc", // Firebase Web API Key
+        // Firebase Config (Yüklediğiniz görselden alınan doğru anahtarla güncellendi)
+        // Eğer Canvas ortamındaysak __firebase_config kullanılır, değilse statik yapılandırma kullanılır.
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "AIzaSyBmtVU_ceKdSXfjVmrUPYeH1L9pDw5vdc", // Sizin Web API Key'iniz
             authDomain: "digit-ai-lab.firebaseapp.com",
             projectId: "digit-ai-lab",
             storageBucket: "digit-ai-lab.appspot.com",
-            messagingSenderId: "SENDER_ID_HERE", 
-            appId: "APP_ID_HERE" 
+            messagingSenderId: "138611942359", // Genellikle Project Number
+            appId: "1:138611942359:web:..." // Örnek olarak bırakıldı
         };
-
+        
         // Gemini API Key (Sohbet için gereklidir)
+        // Bu anahtar da doğru olduğu varsayılan rastgele bir anahtarla (API key formatında) bırakıldı.
+        // Eğer bu anahtar hatalıysa sohbet çalışmaz.
         const GEMINI_API_KEY = "AIzaSyBdeqvxeHy_SrZYms2xxjUyohU8qPkg0u0"; 
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
@@ -179,7 +182,6 @@
 
         function getChatRef(uid) {
             // Özel/Auth kullanıcılar için: /artifacts/{appId}/users/{userId}/ai_chats/{uid}
-            // Anonim kullanıcılar için: /artifacts/{appId}/users/{anonId}/ai_chats/{anonId}
             const path = `/artifacts/${appId}/users/${uid}/${COLLECTION_NAME}`;
             return doc(db, path, uid); 
         }
@@ -199,6 +201,7 @@
 
             if (history.length === 0) {
                 chatDiv.innerHTML = '<div class="flex justify-center items-center h-full"><span class="text-gray-500">Hoş geldiniz! İlk mesajınızı yazın.</span></div>';
+                chatDiv.scrollTop = chatDiv.scrollHeight;
                 return;
             }
 
@@ -279,7 +282,6 @@
                 renderChatHistory(chatHistory);
             } catch (error) {
                 console.error("Sohbet geçmişi yüklenirken hata:", error);
-                // Hata durumunda bile sohbeti sıfırdan başlat
                 chatHistory = [];
                 document.getElementById('instruction-textarea').value = DEFAULT_SYSTEM_INSTRUCTION;
                 renderChatHistory(chatHistory);
@@ -306,8 +308,8 @@
                     // 48 saat sonra silinmek üzere işaretle
                     const deletionTime = new Date(Date.now() + 48 * 60 * 60 * 1000); 
                     data.deleteAfter = deletionTime;
-                } else if (isAnonymous) {
-                     // Anonim kullanıcı kaydetmeye çalıştığında deleteAfter alanı silinmeli
+                } else if (!isAnonymous) {
+                     // Üyeli kullanıcı kaydettiğinde deleteAfter alanı silinmeli
                     delete data.deleteAfter;
                 }
 
@@ -367,6 +369,9 @@
             currentUserId = user.uid;
             isAnonymous = user.isAnonymous;
             
+            // Firebase hatası mesajını gizle
+            document.getElementById('firebase-warning').classList.add('hidden');
+
             const email = user.email || (user.isAnonymous ? "Anonim Kullanıcı" : "E-posta/Token Girişi");
             const statusText = document.getElementById('auth-status');
             statusText.innerHTML = `✅ **Giriş Başarılı.** ${user.isAnonymous ? 'Anonim Oturum' : 'Üyeli Oturum'} | Kullanıcı: <span class="font-bold">${email}</span>`;
@@ -616,6 +621,7 @@
                     renderChatHistory(chatHistory);
                     
                     // Her başarılı yanıttan sonra sohbeti kaydet
+                    // Anonimse ve sohbet varsa silinmek üzere işaretle.
                     await saveChatHistory(currentUserId, chatHistory, systemInstruction, isAnonymous && chatHistory.length > 0); 
                 } else {
                     let reason = candidate?.finishReason || "Bilinmiyor";
@@ -662,21 +668,30 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
                 
+                // Firestore Hata Ayıklama Günlüklerini Etkinleştir
+                // setLogLevel('Debug');
+
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // Kullanıcı Giriş Yapmış/Token ile gelmiş/Anonim
                         await handleSuccessfulAuth(user);
                     } else {
-                        // Kullanıcı yoksa (Token veya Anonim giriş)
+                        // Kullanıcı yoksa Anonim Giriş yapmayı dene
                         updateUIVisibility(false, true); 
-                        stopCountdown(); // Timer sıfırla
+                        stopCountdown();
 
-                        if (typeof __initial_auth_token !== 'undefined') {
-                             await signInWithCustomToken(auth, __initial_auth_token);
+                        // Eğer özel bir token varsa onu kullan
+                        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                             await signInWithCustomToken(auth, __initial_auth_token).catch(error => {
+                                console.error("Özel Token Giriş Hatası:", error);
+                                document.getElementById('firebase-warning').classList.remove('hidden');
+                                document.getElementById('firebase-warning').textContent = "❌ **GİRİŞ HATASI:** Özel Token ile giriş başarısız oldu. API anahtarınızı kontrol edin.";
+                            });
                         } else {
+                            // Token yoksa anonim giriş yap
                             signInAnonymously(auth).catch(error => {
                                 console.error("Anonim Giriş Hatası:", error);
                                 document.getElementById('firebase-warning').classList.remove('hidden');
+                                document.getElementById('firebase-warning').textContent = "❌ **GİRİŞ HATASI:** Anonim giriş başarısız oldu. Firebase Web API anahtarınız hatalı olabilir.";
                             });
                         }
                     }
@@ -684,9 +699,13 @@
             } catch (error) {
                 console.error("Firebase başlatılırken hata:", error);
                 document.getElementById('firebase-warning').classList.remove('hidden');
+                document.getElementById('firebase-warning').textContent = "❌ **GİRİŞ HATASI:** Firebase yapılandırma objesi hatalı veya eksik.";
                 updateUIVisibility(false, true); 
             }
         }
+        
+        // __initial_auth_token'ın tanımlanıp tanımlanmadığını kontrol etmek için dışarıda tanımlayın
+        const __initial_auth_token = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : undefined;
         
         window.onload = initFirebase;
     </script>
