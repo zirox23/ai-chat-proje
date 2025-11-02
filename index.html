@@ -3,744 +3,731 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonim ve Üyeli Sohbet Uygulaması</title>
-    <!-- Tailwind CSS Yüklemesi -->
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>AI Sohbet Asistanı</title>
+    
+
+<script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f7f9fb; }
-        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
-        .chat-message {
-            opacity: 0;
-            transform: translateY(10px);
-            animation: fadeIn 0.3s ease-out forwards;
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f2f5; /* Hafif Gri Arka Plan */
+            overflow: hidden; /* Dışarı taşmaları engelle */
         }
+        #app {
+            background-color: white; /* Beyaz Ana Kutu */
+            border: 1px solid #e2e8f0;
+            min-height: calc(100vh - 2rem); /* Alt kısımdaki boşluğu azaltır */
+        }
+        .chat-container {
+            height: calc(100vh - 12rem); /* Header, footer ve marginleri hesaba katar */
+            min-height: 400px; /* Minimum yükseklik */
+        }
+        .message-box {
+            max-width: 80%;
+            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+            animation: fadeIn 0.3s ease-out; /* Mesaj fade-in animasyonu korundu */
+        }
+        .user-message {
+            background-color: #e0f2fe; /* Mavi 50 */
+            color: #1e40af; /* Mavi 800 */
+            border: 1px solid #bfdbfe; /* Mavi 200 */
+            border-bottom-right-radius: 0.5rem;
+        }
+        .ai-message {
+            background-color: #f0fdf4; /* Yeşil 50 */
+            color: #166534; /* Yeşil 800 */
+            border: 1px solid #dcfce7; /* Yeşil 200 */
+            border-bottom-left-radius: 0.5rem;
+        }
+        
+        /* Özelleştirilmiş Kaydırma Çubuğu */
+        .chat-history::-webkit-scrollbar {
+            width: 8px;
+        }
+        .chat-history::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        .chat-history::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+
+        /* Mesaj Fade-In Animasyonu Korundu */
         @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Modal Stili (Animasyon Kaldırıldı, Sadece Geçiş Korundu) */
+        .modal {
+            background-color: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
         }
     </style>
 </head>
-<body class="min-h-screen p-4 sm:p-8">
+<body class="p-2">
+
+<div id="app" class="max-w-7xl mx-auto rounded-xl shadow-2xl p-6 md:p-8">
     
-    <div class="max-w-6xl mx-auto bg-white shadow-2xl rounded-xl p-4 sm:p-8 space-y-6">
-        <header class="border-b pb-4 mb-4 flex justify-between items-center">
-            <h1 class="text-3xl font-extrabold text-gray-800 flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-600 mr-3" viewBox="0 0 20 20" fill="currentColor">
-                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd" />
-                </svg>
-                AI Sohbet Asistanı
-            </h1>
-            <div class="flex space-x-3 items-center">
-                <div id="countdown-timer" class="text-lg font-bold text-red-600 hidden"></div>
-                <button id="auth-modal-open-btn" class="px-4 py-2 bg-purple-600 text-white font-semibold rounded-lg shadow-md hover:bg-purple-700 transition duration-150 hidden">
-                    Giriş Yap / Kayıt Ol
-                </button>
-                <button id="logout-btn" class="px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition duration-150 hidden">
-                    Çıkış Yap
-                </button>
-            </div>
-        </header>
+    <!-- Başlık ve Oturum Butonu -->
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 border-b border-gray-200 pb-4">
+        <h1 class="text-3xl font-extrabold text-gray-800 flex items-center mb-2 md:mb-0">
+            <svg class="w-7 h-7 mr-2 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M3.636 5.636l.707.707m0 7.07l.707.707m6.364-7.07l-.707.707M12 21V9"></path></svg>
+            AI Sohbet Asistanı
+        </h1>
+        <button id="auth-btn" class="px-5 py-2 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 text-sm">
+            Giriş Yap / Kayıt Ol
+        </button>
+    </header>
 
-        <p id="auth-status" class="mt-1 text-sm text-gray-600">Oturum durumu yükleniyor...</p>
-        
-        <!-- Ana İçerik -->
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-
-            <!-- Sol Panel: Sadece Ayarlar -->
-            <div class="lg:col-span-1 space-y-6">
-                <!-- SİSTEM TALİMATI BÖLÜMÜ -->
-                <div class="space-y-3 p-4 border border-gray-200 rounded-lg shadow-sm bg-gray-50">
-                    <h2 class="text-xl font-semibold text-gray-700">⚙️ AI Talimatı</h2>
-                    <textarea id="instruction-textarea" rows="4" class="w-full p-2 border border-gray-300 rounded-md text-sm focus:ring-blue-500 disabled:bg-gray-200" 
-                        placeholder="AI'ın nasıl davranması gerektiğini buraya yazın." disabled></textarea>
-                    <button id="instruction-update-btn" class="w-full px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition disabled:bg-blue-300" disabled>Talimatı Kaydet</button>
-                    <p id="instruction-status" class="text-sm text-center text-gray-500">Anonim kullanıcılar talimatı kaydedemez.</p>
-                </div>
-                
-                <!-- Hata/Uyarı Alanı -->
-                <div id="alert-container" class="space-y-2">
-                    <div id="api-warning" class="text-sm p-3 bg-green-100 text-green-700 border border-green-300 rounded-lg hidden">
-                        ✅ **BİLGİ:** **Gemini API Key** başarıyla yapılandırıldı.
-                    </div>
-                    <div id="firebase-warning" class="text-sm p-3 bg-red-100 text-red-700 border border-red-300 rounded-lg hidden">
-                        ❌ **GİRİŞ HATASI:** Firebase anahtarınız veya Anonim/Token giriş ayarlarınız hatalı olabilir. Sohbet kilitli.
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Sağ Panel: Sohbet Arayüzü -->
-            <div class="lg:col-span-3 space-y-4">
-                <h2 class="text-2xl font-semibold text-gray-800">💬 Sohbetiniz</h2>
-                
-                <!-- Sohbet Kutusu -->
-                <div id="chat-history" class="h-[450px] border border-gray-300 rounded-lg p-4 bg-white overflow-y-auto custom-scrollbar space-y-4 shadow-inner">
-                    <div class="flex justify-center items-center h-full">
-                        <span class="text-gray-500">Anonim giriş bekleniyor...</span>
-                    </div>
-                </div>
-
-                <!-- Giriş Alanı ve Düğme -->
-                <div class="flex space-x-3">
-                    <input type="text" id="user-input" placeholder="Lütfen oturum açılmasını bekleyin..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-purple-500 focus:border-purple-500 disabled:bg-gray-100" disabled>
-                    <button id="send-btn" class="px-6 py-3 text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition duration-150 disabled:bg-purple-300" disabled>Gönder</button>
-                </div>
-                
-                <div class="flex justify-between items-center text-sm">
-                    <button id="clear-chat-btn" class="text-red-500 hover:text-red-700 transition duration-150" disabled>Sohbeti Temizle (Veritabanı dahil)</button>
-                    <span id="loading-indicator" class="text-blue-500 hidden font-medium">AI yanıtı bekleniyor...</span>
-                </div>
-            </div>
-
-        </div>
-
-        <!-- Özel Modal Alanı (Alert yerine) -->
-        <div id="custom-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50 hidden">
-            <div class="bg-white p-6 rounded-lg shadow-2xl w-full max-w-sm">
-                <h3 id="modal-title" class="text-xl font-bold mb-3 text-gray-800">Başlık</h3>
-                <p id="modal-content" class="text-gray-700 mb-4"></p>
-                <button id="modal-close-btn" class="w-full px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700">Tamam</button>
-            </div>
-        </div>
-
-        <!-- GİRİŞ/KAYIT MODALI -->
-        <div id="auth-modal" class="fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 hidden">
-            <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md transform transition-all duration-300 scale-100">
-                <div class="flex justify-between items-center mb-6 border-b pb-3">
-                    <h3 id="auth-modal-title" class="text-2xl font-bold text-gray-800">Oturum Yönetimi</h3>
-                    <button id="auth-modal-close-btn" class="text-gray-400 hover:text-gray-600">&times;</button>
-                </div>
-                
-                <div class="flex mb-4">
-                    <button id="modal-login-tab" class="flex-1 p-3 text-center font-semibold rounded-l-lg border border-r-0 border-blue-500 bg-blue-500 text-white">Giriş Yap</button>
-                    <button id="modal-register-tab" class="flex-1 p-3 text-center font-semibold rounded-r-lg border border-blue-500 bg-gray-100 text-blue-600 hover:bg-gray-200">Kayıt Ol</button>
-                </div>
-
-                <!-- Giriş Formu -->
-                <div id="login-form-content" class="space-y-4">
-                    <input type="email" id="login-email" placeholder="E-posta Adresi" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 text-base">
-                    <input type="password" id="login-password" placeholder="Şifre" class="w-full p-3 border border-gray-300 rounded-md focus:ring-blue-500 text-base">
-                    <button id="modal-login-btn" class="w-full px-4 py-3 text-white bg-green-600 rounded-lg shadow-md hover:bg-green-700 transition text-lg font-bold">Giriş Yap</button>
-                    <p id="login-error-message" class="text-sm text-red-500 text-center hidden"></p>
-                </div>
-
-                <!-- Kayıt Formu -->
-                <div id="register-form-content" class="space-y-4 hidden">
-                    <input type="email" id="register-email" placeholder="E-posta Adresi" class="w-full p-3 border border-gray-300 rounded-md focus:ring-purple-500 text-base">
-                    <input type="password" id="register-password" placeholder="Şifre (Min 6 Karakter)" class="w-full p-3 border border-gray-300 rounded-md focus:ring-purple-500 text-base">
-                    <input type="password" id="register-password-confirm" placeholder="Şifre Onayı" class="w-full p-3 border border-gray-300 rounded-md focus:ring-purple-500 text-base">
-                    <button id="modal-register-btn" class="w-full px-4 py-3 text-white bg-purple-600 rounded-lg shadow-md hover:bg-purple-700 transition text-lg font-bold">Kayıt Ol</button>
-                    <p id="register-error-message" class="text-sm text-red-500 text-center hidden"></p>
-                </div>
-
-            </div>
-        </div>
-
+    <!-- Oturum Bilgisi -->
+    <div id="auth-info" class="text-sm p-3 rounded-lg mb-4 flex flex-col md:flex-row items-center justify-between bg-blue-50 border border-blue-200">
+        <span id="auth-status" class="font-medium text-blue-800 mb-2 md:mb-0">
+            Oturum durumu yükleniyor...
+        </span>
+        <span id="gemini-status" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold hidden">
+            <svg class="inline w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            Gemini API Bağlantısı OK
+        </span>
+        <span id="update-info" class="text-xs text-gray-500 ml-0 md:ml-4 mt-2 md:mt-0">
+            Son Güncelleme: 02 Kasım 2025, 03:08
+        </span>
     </div>
 
-    <!-- Firebase Kütüphaneleri -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, getDoc, collection, query, orderBy, getDocs, updateDoc, deleteDoc, runTransaction } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+    <!-- Ana İçerik: Talimat ve Sohbet Alanları -->
+    <div id="main-content" class="flex flex-col md:flex-row gap-6 chat-container">
         
-        // =========================================================================
-        // GLOBAL DEĞİŞKENLER VE YAPILANDIRMA
-        // =========================================================================
+        <!-- AI Talimat Alanı -->
+        <div class="md:w-1/3 bg-gray-50 p-5 rounded-xl border border-gray-200 flex flex-col shadow-sm">
+            <h2 class="text-lg font-bold text-gray-700 mb-3 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                AI Talimatı (System Prompt)
+            </h2>
+            
+            <textarea id="ai-system-prompt" rows="8" class="w-full p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 text-gray-800 bg-white resize-none placeholder-gray-400 text-sm" placeholder="AI'ın nasıl davranması gerektiğini buraya yazın.">
+Sen yardımcı ve kibar bir yapay zeka asistanısısın. Türkçe yazar ve samimi bir tonda konuşursun.
+            </textarea>
+            
+            <button id="save-prompt-btn" class="mt-4 p-3 bg-indigo-500 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-600 transition duration-150 disabled:bg-gray-300 disabled:text-gray-500" disabled>
+                Talimatı Kaydet
+            </button>
+            <p id="prompt-status" class="mt-2 text-xs text-center text-gray-500">
+                Talimat yükleniyor...
+            </p>
+        </div>
+
+        <!-- Sohbet Alanı -->
+        <div class="md:w-2/3 flex flex-col bg-white rounded-xl border border-gray-200 shadow-sm">
+            
+            <h2 class="text-lg font-bold text-gray-700 p-4 border-b border-gray-200 flex items-center">
+                <svg class="w-5 h-5 mr-2 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 4v-4z"></path></svg>
+                Sohbetiniz
+            </h2>
+
+            <!-- Sohbet Geçmişi -->
+            <div id="chat-history" class="chat-history flex-1 p-4 md:p-6 overflow-y-auto space-y-4">
+                <div class="text-center text-gray-400 italic p-4" id="initial-message">
+                    Oturum durumu kontrol ediliyor. Lütfen bekleyiniz...
+                </div>
+            </div>
+
+            <!-- Mesaj Gönderme Formu -->
+            <div class="p-4 border-t border-gray-200 bg-gray-50 rounded-b-xl">
+                <form id="chat-form" class="flex gap-3">
+                    <input type="text" id="user-input" placeholder="Oturum açması bekleniyor..." class="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 text-gray-800 bg-white placeholder-gray-400" autocomplete="off" disabled>
+                    <button type="submit" id="send-btn" class="px-6 py-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150 disabled:bg-gray-300 disabled:text-gray-500" disabled>
+                        Gönder
+                    </button>
+                </form>
+                <div class="flex justify-between items-center mt-2 text-xs text-gray-500">
+                    <button type="button" id="clear-chat-btn" class="hover:underline text-red-500 font-medium disabled:text-gray-400 transition duration-150" disabled>
+                        Sohbeti Temizle (Veritabanı dahil)
+                    </button>
+                    <span id="chat-error" class="text-red-500 font-medium hidden"></span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="text-center text-xs text-gray-500 mt-6 border-t border-gray-200 pt-4">
+        Teknoloji Kaynakları: <a href="https://ai.google.dev/gemini-api" target="_blank" class="hover:underline text-blue-600 font-semibold">Google Gemini API</a> | 
+        <a href="https://firebase.google.com/" target="_blank" class="hover:underline text-yellow-600 font-semibold">Firebase Firestore & Auth</a> | 
+        <a href="https://tailwindcss.com/" target="_blank" class="hover:underline text-teal-600 font-semibold">Tailwind CSS</a>
+    </footer>
+</div>
+
+
+<!-- Oturum Modal Penceresi (Login/Register Pop-up) -->
+<div id="auth-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 hidden modal">
+    <div class="bg-white p-8 rounded-xl shadow-2xl w-full max-w-md"> <!-- modal-content sınıfı kaldırıldı -->
+        <div class="flex justify-between items-center mb-6 border-b pb-3">
+            <h3 class="text-2xl font-bold text-gray-800">Oturum Yönetimi</h3>
+            <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700 text-2xl font-bold transition duration-150">&times;</button>
+        </div>
         
-        let auth, db, app;
-        let currentUserId = null;
-        let isAnonymous = false;
-        let isAuthReady = false;
-        let chatHistory = []; 
-        let countdownInterval;
-        const ANON_TIMEOUT_MS = 5 * 60 * 1000; // 5 dakika
-        const COLLECTION_NAME = 'ai_chats';
-        const DEFAULT_SYSTEM_INSTRUCTION = "Sen yardımcı ve kibar bir yapay zeka asistanısın. Türkçe olarak yanıt ver. Yanıtlarını kibar ve samimi bir tonda tut.";
+        <!-- Tablar -->
+        <div class="flex mb-4">
+            <button id="modal-login-tab" class="flex-1 p-3 text-lg font-semibold rounded-l-lg bg-indigo-500 text-white">Giriş Yap</button>
+            <button id="modal-register-tab" class="flex-1 p-3 text-lg font-semibold rounded-r-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition duration-150">Kayıt Ol</button>
+        </div>
+
+        <!-- Giriş Formu -->
+        <div id="login-form-content">
+            <input type="email" id="login-email" placeholder="E-posta" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
+            <input type="password" id="login-password" placeholder="Şifre" class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
+            <button id="login-btn" class="w-full p-3 bg-indigo-600 text-white font-bold rounded-lg shadow-md hover:bg-indigo-700 transition duration-150">Giriş Yap</button>
+            <p id="login-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
+        </div>
+
+        <!-- Kayıt Formu -->
+        <div id="register-form-content" class="hidden">
+            <input type="email" id="register-email" placeholder="E-posta" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
+            <input type="password" id="register-password" placeholder="Şifre" class="w-full p-3 mb-3 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
+            <input type="password" id="register-password-confirm" placeholder="Şifre Onayı" class="w-full p-3 mb-4 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-gray-800">
+            <button id="register-btn" class="w-full p-3 bg-green-600 text-white font-bold rounded-lg shadow-md hover:bg-green-700 transition duration-150">Kayıt Ol</button>
+            <p id="register-error" class="text-red-500 text-sm mt-3 text-center hidden"></p>
+        </div>
+    </div>
+</div>
+
+
+<script type="module">
+    // Firebase ve Diğer Modül İçe Aktarmaları
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+    import { getAuth, signInAnonymously, signInWithCustomToken, signOut, onAuthStateChanged, createUserWithEmailAndPassword, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc, collection, query, onSnapshot, serverTimestamp, deleteDoc, getDocs, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+    // --- GLOBAL AYARLAR ---
+    const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-chat-app';
+    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+    const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+    const apiKey = ""; // Canvas ortamında API anahtarı otomatik sağlanır.
+
+    let db, auth;
+    let userId = null;
+    let chatHistory = [];
+    let isAILoading = false;
+    let isReadyToChat = false; 
+
+    // --- FIREBASE BAŞLATMA ---
+    try {
+        const app = initializeApp(firebaseConfig);
+        auth = getAuth(app);
+        db = getFirestore(app);
+    } catch (e) {
+        console.error("Firebase başlatma hatası:", e);
+        document.getElementById('auth-status').innerHTML = '<span class="text-red-500 font-bold">HATA: Firebase Yapılandırması Eksik!</span>';
+    }
+    
+    // Firestore Yol Yardımcıları
+    const getChatCollectionRef = (uid) => collection(db, `artifacts/${appId}/users/${uid}/chat_history`);
+    const getPromptDocRef = (uid) => doc(db, `artifacts/${appId}/users/${uid}/ai_settings`, 'prompt_settings');
+    
+    // --- UI ELEMANLARI ---
+    const authStatusEl = document.getElementById('auth-status');
+    const authBtnEl = document.getElementById('auth-btn');
+    const userInputEl = document.getElementById('user-input');
+    const sendBtnEl = document.getElementById('send-btn');
+    const chatHistoryEl = document.getElementById('chat-history');
+    const chatFormEl = document.getElementById('chat-form');
+    const chatErrorEl = document.getElementById('chat-error');
+    const savePromptBtnEl = document.getElementById('save-prompt-btn');
+    const aiSystemPromptEl = document.getElementById('ai-system-prompt');
+    const promptStatusEl = document.getElementById('prompt-status');
+    const initialMessageEl = document.getElementById('initial-message');
+    const clearChatBtnEl = document.getElementById('clear-chat-btn');
+    const geminiStatusEl = document.getElementById('gemini-status');
+    const updateInfoEl = document.getElementById('update-info');
+    
+    // Modal Elemanları
+    const authModalEl = document.getElementById('auth-modal');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const modalLoginTab = document.getElementById('modal-login-tab');
+    const modalRegisterTab = document.getElementById('modal-register-tab');
+    const loginFormContent = document.getElementById('login-form-content');
+    const registerFormContent = document.getElementById('register-form-content');
+    const loginEmailEl = document.getElementById('login-email');
+    const loginPasswordEl = document.getElementById('login-password');
+    const loginBtnEl = document.getElementById('login-btn');
+    const loginErrorEl = document.getElementById('login-error');
+    const registerEmailEl = document.getElementById('register-email');
+    const registerPasswordEl = document.getElementById('register-password');
+    const registerPasswordConfirmEl = document.getElementById('register-password-confirm');
+    const registerBtnEl = document.getElementById('register-btn');
+    const registerErrorEl = document.getElementById('register-error');
+
+    // --- YARDIMCI FONKSİYONLAR ---
+
+    function createMessageElement(text, role, isPending = false) {
+        const messageDiv = document.createElement('div');
+        const roleClass = role === 'user' ? 'user-message rounded-bl-xl' : 'ai-message rounded-br-xl';
         
-        // Kullanıcının sağladığı anahtar doğrudan buraya eklendi.
-        const USER_PROVIDED_GEMINI_API_KEY = "AIzaSyBdeqvxeHy_SrZYms2xxjUyohU8qPkg0u0";
-        // Canvas ortamından gelen anahtar veya kullanıcıdan gelen anahtar kullanılır.
-        const GEMINI_API_KEY = USER_PROVIDED_GEMINI_API_KEY || (typeof __gemini_api_key !== 'undefined' ? __gemini_api_key : ""); 
+        messageDiv.className = `message-box p-4 rounded-xl ${roleClass} flex flex-col`;
+
+        if (isPending) {
+            // Loading animasyonu kaldırıldı, sadece metin gösteriliyor
+            messageDiv.innerHTML = `<div class="text-gray-500 italic">AI yanıt bekleniyor...</div>`;
+            messageDiv.id = 'pending-ai-response';
+        } else {
+            messageDiv.innerHTML = `<p class="whitespace-pre-wrap">${text}</p>`;
+        }
+
+        const container = document.createElement('div');
+        container.className = `flex ${role === 'user' ? 'justify-end' : 'justify-start'} w-full`;
+        container.appendChild(messageDiv);
+
+        chatHistoryEl.appendChild(container);
+        chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+    }
+
+    function renderChatHistory(history) {
+        chatHistory = history;
+        chatHistoryEl.innerHTML = ''; 
+        if (history.length === 0) {
+            initialMessageEl.textContent = 'Merhaba! Sohbeti başlatmak için bir şeyler yazın.';
+            chatHistoryEl.appendChild(initialMessageEl);
+            initialMessageEl.classList.remove('hidden');
+        } else {
+            initialMessageEl.classList.add('hidden');
+            history.forEach(msg => createMessageElement(msg.text, msg.role));
+        }
+        chatHistoryEl.scrollTop = chatHistoryEl.scrollHeight;
+    }
+
+    function setChatReadyState(ready) {
+        isReadyToChat = ready;
+        userInputEl.disabled = !ready || isAILoading;
+        savePromptBtnEl.disabled = !ready;
+        clearChatBtnEl.disabled = !ready;
         
-        // Firebase Config (Kullanıcının verdiği Web API Key ile güncellendi)
-        const staticFirebaseConfig = {
-            // KULLANICININ SAĞLADIĞI WEB API KEY BURADA:
-            apiKey: "AIzaSyBmtvU_ceKdSXf-jVmrUPYeH1L9pDw5vdc", 
-            authDomain: "digit-ai-lab.firebaseapp.com",
-            projectId: "digit-ai-lab",
-            storageBucket: "digit-ai-lab.appspot.com",
-            messagingSenderId: "138611942359", 
-            appId: "1:138611942359:web:..." 
+        if (ready) {
+            userInputEl.placeholder = "Mesajınızı buraya yazın...";
+            geminiStatusEl.classList.remove('hidden');
+        } else {
+            userInputEl.placeholder = "Oturum açması bekleniyor...";
+            userInputEl.disabled = true;
+            sendBtnEl.disabled = true;
+            geminiStatusEl.classList.add('hidden');
+        }
+        sendBtnEl.disabled = !ready || isAILoading || userInputEl.value.trim() === '';
+    }
+
+    function setLoadingState(isLoading) {
+        isAILoading = isLoading;
+        setChatReadyState(isReadyToChat); 
+        sendBtnEl.textContent = isLoading ? 'AI yanıt veriyor...' : 'Gönder';
+    }
+
+
+    // --- FIREBASE VERİ OKUMA / YAZMA ---
+
+    async function loadPrompt() {
+        if (!userId) {
+             promptStatusEl.textContent = 'Oturum açık değil.';
+             aiSystemPromptEl.disabled = true;
+             savePromptBtnEl.disabled = true;
+             return;
+        }
+        aiSystemPromptEl.disabled = false; // Kullanıcının yazabilmesi için aktif et
+        savePromptBtnEl.disabled = false; // Kaydet butonunu aktif et
+        promptStatusEl.textContent = 'Talimat yükleniyor...';
+        try {
+            const docRef = getPromptDocRef(userId);
+            const promptDoc = await getDoc(docRef);
+            
+            if (promptDoc.exists()) {
+                const data = promptDoc.data();
+                aiSystemPromptEl.value = data.prompt || aiSystemPromptEl.placeholder;
+                promptStatusEl.textContent = 'Talimat başarıyla yüklendi.';
+            } else {
+                await savePrompt(true); 
+            }
+        } catch (error) {
+            console.error("Talimat yükleme hatası:", error);
+            promptStatusEl.textContent = 'HATA: Talimat yüklenemedi.';
+        }
+    }
+
+    async function savePrompt(isInitialSave = false) {
+        if (!userId) return;
+        if (!isInitialSave) {
+            savePromptBtnEl.disabled = true;
+            promptStatusEl.textContent = 'Kaydediliyor...';
+        }
+        try {
+            await setDoc(getPromptDocRef(userId), {
+                prompt: aiSystemPromptEl.value.trim(),
+                timestamp: serverTimestamp()
+            });
+            promptStatusEl.textContent = isInitialSave ? 'Varsayılan talimat ayarlandı.' : 'Talimat başarıyla kaydedildi!';
+        } catch (error) {
+            console.error("Talimat kaydetme hatası:", error);
+            promptStatusEl.textContent = 'HATA: Talimat kaydedilemedi.';
+        } finally {
+            if (!isInitialSave) {
+                savePromptBtnEl.disabled = false;
+            }
+        }
+    }
+    
+    async function clearChat() {
+        if (!userId || isAILoading) return;
+
+        // confirm() yerine tarayıcı uyumlu bir modal/uyarı kullanılmalıdır (bu ortamda tarayıcının kendi confirm'i çalışmayabilir, ancak basitlik için bırakıldı)
+        if (!confirm("Sohbet geçmişini (veritabanı dahil) silmek istediğinizden emin misiniz? Bu işlem geri alınamaz!")) {
+            return;
+        }
+
+        clearChatBtnEl.disabled = true;
+        setLoadingState(true);
+        chatErrorEl.classList.add('hidden');
+        
+        try {
+            const chatCollectionRef = getChatCollectionRef(userId);
+            const querySnapshot = await getDocs(chatCollectionRef);
+            
+            for (const doc of querySnapshot.docs) {
+                await deleteDoc(doc.ref);
+            }
+            
+            console.log("Sohbet geçmişi başarıyla temizlendi.");
+            
+        } catch (error) {
+            console.error("Sohbeti temizleme hatası:", error);
+            chatErrorEl.textContent = 'Sohbet temizlenirken bir hata oluştu.';
+            chatErrorEl.classList.remove('hidden');
+        } finally {
+            clearChatBtnEl.disabled = false;
+            setLoadingState(false);
+        }
+    }
+
+
+    function setupChatHistoryListener() {
+        if (!userId) {
+            chatHistoryEl.innerHTML = `<div class="text-center text-gray-400 italic p-4" id="initial-message">Oturum açık değil, sohbet geçmişi yüklenemiyor.</div>`;
+            return;
+        }
+
+        const q = query(getChatCollectionRef(userId)); 
+        
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const newHistory = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            
+            newHistory.sort((a, b) => {
+                const aTime = a.timestamp?.toMillis() || a.timestamp || 0;
+                const bTime = b.timestamp?.toMillis() || b.timestamp || 0;
+                return aTime - bTime;
+            });
+
+            renderChatHistory(newHistory);
+            
+            if (!isReadyToChat) {
+                setChatReadyState(true);
+            }
+
+        }, (error) => {
+            console.error("Sohbet geçmişi dinleme hatası:", error);
+            chatHistoryEl.innerHTML = `<div class="text-center text-red-500 p-4">HATA: Sohbet geçmişi yüklenemedi.</div>`;
+            setChatReadyState(false);
+        });
+
+        return unsubscribe; // Dinleyiciyi kapatmak için kullanılır (örneğin çıkış yaparken)
+    }
+
+    // --- GEMINI API İŞLEMLERİ ---
+
+    async function generateContent(userQuery) {
+        setLoadingState(true);
+        chatErrorEl.classList.add('hidden');
+        
+        createMessageElement('', 'model', true); // Bekleyen yanıt balonu
+
+        const systemPrompt = aiSystemPromptEl.value.trim() || 'Sen kibar ve yardımcı bir yapay zeka asistanısısın.';
+
+        const contents = chatHistory.slice(-10).map(msg => ({ 
+            role: msg.role === 'user' ? 'user' : 'model',
+            parts: [{ text: msg.text }]
+        }));
+
+        contents.push({ role: 'user', parts: [{ text: userQuery }] });
+
+        const payload = {
+            contents: contents,
+            tools: [{ "google_search": {} }],
+            systemInstruction: { parts: [{ text: systemPrompt }] },
         };
 
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : staticFirebaseConfig;
-        
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
 
-        // __initial_auth_token'ın tanımlanıp tanımlanmadığını kontrol etmek için dışarıda tanımlayın
-        const __initial_auth_token = typeof window.__initial_auth_token !== 'undefined' ? window.__initial_auth_token : undefined;
+        let aiResponseText = "Üzgünüm, yanıt alınırken bir sorun oluştu.";
 
-        // =========================================================================
-        // YARDIMCI FONKSİYONLAR (UI & Modal)
-        // =========================================================================
-
-        function getChatRef(uid) {
-            // Özel/Auth kullanıcılar için: /artifacts/{appId}/users/{userId}/ai_chats/{uid}
-            const path = `/artifacts/${appId}/users/${uid}/${COLLECTION_NAME}`;
-            return doc(db, path, uid); 
-        }
-
-        function showModal(title, content) {
-            document.getElementById('modal-title').textContent = title;
-            document.getElementById('modal-content').textContent = content;
-            document.getElementById('custom-modal').classList.remove('hidden');
-        }
-        document.getElementById('modal-close-btn').addEventListener('click', () => {
-            document.getElementById('custom-modal').classList.add('hidden');
-        });
-
-        function renderChatHistory(history) {
-            const chatDiv = document.getElementById('chat-history');
-            chatDiv.innerHTML = ''; 
-
-            if (history.length === 0) {
-                const message = currentUserId ? 
-                    'Hoş geldiniz! İlk mesajınızı yazın.' : 
-                    'Anonim giriş bekleniyor veya giriş hatası var. Lütfen bekleyin.';
-                chatDiv.innerHTML = `<div class="flex justify-center items-center h-full"><span class="text-gray-500">${message}</span></div>`;
-                chatDiv.scrollTop = chatDiv.scrollHeight;
-                return;
-            }
-
-            history.forEach((msg, index) => {
-                const isUser = msg.role === 'user';
-                let text = msg.parts[0].text;
-                
-                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>'); 
-
-                const messageHtml = `
-                    <div class="flex ${isUser ? 'justify-end' : 'justify-start'} chat-message" style="animation-delay: ${index * 0.05}s;">
-                        <div class="max-w-xl p-3 rounded-xl shadow-md ${isUser ? 'bg-purple-500 text-white' : 'bg-gray-200 text-gray-800'}">
-                            <p class="font-bold text-xs mb-1">${isUser ? 'Siz' : 'AI Asistanı'}</p>
-                            <p>${text}</p>
-                        </div>
-                    </div>
-                `;
-                chatDiv.insertAdjacentHTML('beforeend', messageHtml);
+        try {
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
             });
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-        }
 
-        function updateUIVisibility(isReady = false, isAnon = true, errorMessage = null) {
-            const userInput = document.getElementById('user-input');
-            const sendBtn = document.getElementById('send-btn');
-            const clearChatBtn = document.getElementById('clear-chat-btn');
-            const instructionTextarea = document.getElementById('instruction-textarea');
-            const instructionUpdateBtn = document.getElementById('instruction-update-btn');
-            const authModalOpenBtn = document.getElementById('auth-modal-open-btn');
-            const logoutBtn = document.getElementById('logout-btn');
-            const firebaseWarning = document.getElementById('firebase-warning');
-            const authStatus = document.getElementById('auth-status');
-            
-            isAuthReady = isReady;
-
-            // Gemini API Key'in var olup olmadığını kontrol et (Kullanıcının key'i artık var)
-            const isApiKeyValid = GEMINI_API_KEY && GEMINI_API_KEY.length > 10; 
-            
-            // Sadece Auth'un hazır olması UI'ı etkinleştirmek için yeterlidir.
-            const finalReady = isReady; 
-
-            // API uyarı/bilgi mesajını ayarla
-            document.getElementById('api-warning').classList.toggle('hidden', !isApiKeyValid);
-            firebaseWarning.classList.toggle('hidden', !errorMessage);
-
-            if (errorMessage) {
-                 firebaseWarning.textContent = `❌ **GİRİŞ HATASI:** ${errorMessage}`;
-                 authStatus.textContent = "❌ Oturum Açılamadı: Sohbet kilitli.";
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(`API Hatası: ${response.status} - ${errorData.error?.message || response.statusText}`);
             }
 
+            const result = await response.json();
+            aiResponseText = result.candidates?.[0]?.content?.parts?.[0]?.text || aiResponseText;
 
-            userInput.disabled = !finalReady;
-            sendBtn.disabled = !finalReady;
-            clearChatBtn.disabled = !finalReady;
-            instructionTextarea.disabled = !finalReady;
-            instructionUpdateBtn.disabled = !(finalReady && !isAnon); // Anonim kullanıcılar kaydedemez
+        } catch (error) {
+            console.error("Gemini API çağrısında hata:", error);
+            chatErrorEl.textContent = `Mesaj gönderilemedi: ${error.message}`;
+            chatErrorEl.classList.remove('hidden');
+            aiResponseText = "İletişim hatası. Lütfen konsolu kontrol edin.";
+        } finally {
+            const pendingEl = document.getElementById('pending-ai-response');
+            if (pendingEl) pendingEl.remove();
+            
+            await saveMessagesToDB(userQuery, aiResponseText);
+            
+            setLoadingState(false);
+        }
+    }
 
-            if (isAnon) {
-                authModalOpenBtn.classList.remove('hidden');
-                logoutBtn.classList.add('hidden');
-                document.getElementById('instruction-status').textContent = "Anonim kullanıcılar talimatı kaydedemez.";
+    async function saveMessagesToDB(userText, aiText) {
+        if (!userId) return;
+        const chatCollectionRef = getChatCollectionRef(userId);
+        const userTime = Date.now();
+
+        try {
+            await setDoc(doc(chatCollectionRef), {
+                text: userText,
+                role: 'user',
+                timestamp: userTime 
+            });
+
+            await setDoc(doc(chatCollectionRef), {
+                text: aiText,
+                role: 'model',
+                timestamp: userTime + 1 
+            });
+            
+        } catch (error) {
+            console.error("Mesajları Firestore'a kaydederken hata:", error);
+        }
+    }
+    
+    // --- MODAL YÖNETİMİ ---
+    function openAuthModal(mode = 'login') {
+        authModalEl.classList.remove('hidden');
+        // Giriş/Kayıt butonlarının içeriğini güncelledik, bu yüzden modalı kapatıyoruz
+        if (mode === 'register') {
+            showRegisterForm();
+        } else {
+            showLoginForm();
+        }
+    }
+
+    function closeAuthModal() {
+        authModalEl.classList.add('hidden');
+        loginErrorEl.classList.add('hidden');
+        registerErrorEl.classList.add('hidden');
+    }
+
+    function showLoginForm() {
+        loginFormContent.classList.remove('hidden');
+        registerFormContent.classList.add('hidden');
+        modalLoginTab.classList.add('bg-indigo-500', 'text-white');
+        modalLoginTab.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+        modalRegisterTab.classList.remove('bg-indigo-500', 'text-white');
+        modalRegisterTab.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+    }
+
+    function showRegisterForm() {
+        loginFormContent.classList.add('hidden');
+        registerFormContent.classList.remove('hidden');
+        modalRegisterTab.classList.add('bg-indigo-500', 'text-white');
+        modalRegisterTab.classList.remove('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+        modalLoginTab.classList.remove('bg-indigo-500', 'text-white');
+        modalLoginTab.classList.add('bg-gray-200', 'text-gray-700', 'hover:bg-gray-300');
+    }
+
+    // --- OTURUM YÖNETİMİ ---
+
+    let unsubscribeFromChatHistory = null; // Dinleyiciyi tutacak değişken
+
+    function updateAuthUI(isLoggedIn, userEmail = 'Anonim Kullanıcı') {
+        if (isLoggedIn) {
+            authBtnEl.textContent = 'Çıkış Yap';
+            authBtnEl.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            authBtnEl.classList.add('bg-red-500', 'hover:bg-red-600');
+            
+            authStatusEl.innerHTML = `
+                <span class="font-semibold text-green-700">**Giriş Başarılı:**</span>
+                <span class="text-gray-600">**Üyeli Oturum | Kullanıcı:** ${userEmail}</span>
+            `;
+            // Sadece üye oturumunda (anonim değilse) güncellenme zamanını göster
+            if (userEmail !== 'Anonim Kullanıcı') {
+                updateInfoEl.textContent = `Son Güncelleme: ${new Date().toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric' })}, ${new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}`;
             } else {
-                authModalOpenBtn.classList.add('hidden');
-                logoutBtn.classList.remove('hidden');
-                document.getElementById('instruction-status').textContent = "Talimatınız kaydedilebilir.";
+                 updateInfoEl.textContent = '';
             }
 
-            userInput.placeholder = finalReady ? "Mesajınızı buraya yazın..." : (errorMessage || "Oturum açma bekleniyor.");
+        } else {
+            authBtnEl.textContent = 'Giriş Yap / Kayıt Ol'; 
+            authBtnEl.classList.remove('bg-red-500', 'hover:bg-red-600');
+            authBtnEl.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+            authStatusEl.innerHTML = `<span class="font-semibold text-gray-500">Anonim olarak devam ediliyor.</span>`;
+            updateInfoEl.textContent = ''; // Anonim kullanıcıda güncelleme zamanı gösterme
         }
+    }
 
-        // =========================================================================
-        // FIREBASE & VERİTABANI İŞLEMLERİ
-        // =========================================================================
-
-        /**
-         * Firestore'dan sohbeti yükler ve yerel geçmişi günceller.
-         */
-        async function loadChatHistory(uid) {
-            try {
-                const docRef = getChatRef(uid);
-                const docSnap = await getDoc(docRef);
-
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    // JSON.parse ile karmaşık yapıyı geri yükle
-                    chatHistory = JSON.parse(data.historyJson || '[]');
-                    document.getElementById('instruction-textarea').value = data.systemInstruction || DEFAULT_SYSTEM_INSTRUCTION;
-                } else {
-                    // Yeni kullanıcı veya anonim kullanıcı
-                    chatHistory = [];
-                    document.getElementById('instruction-textarea').value = DEFAULT_SYSTEM_INSTRUCTION;
-                }
-                renderChatHistory(chatHistory);
-            } catch (error) {
-                console.error("Sohbet geçmişi yüklenirken hata:", error);
-                chatHistory = [];
-                document.getElementById('instruction-textarea').value = DEFAULT_SYSTEM_INSTRUCTION;
-                renderChatHistory(chatHistory);
-                showModal("Veritabanı Hatası", "Sohbet geçmişi yüklenirken bir sorun oluştu.");
-            }
-        }
-
-        /**
-         * Sohbeti Firestore'a kaydeder.
-         */
-        async function saveChatHistory(uid, history, systemInstruction, markForDeletion = false) {
-            if (!uid) return false;
-            try {
-                const docRef = getChatRef(uid);
-                
-                const data = {
-                    // Karmaşık yapıyı JSON string olarak kaydet
-                    historyJson: JSON.stringify(history), 
-                    systemInstruction: systemInstruction,
-                    lastUpdated: new Date(),
-                    isAnonymous: isAnonymous
-                };
-                
-                if (markForDeletion) {
-                    // 48 saat sonra silinmek üzere işaretle
-                    const deletionTime = new Date(Date.now() + 48 * 60 * 60 * 1000); 
-                    data.deleteAfter = deletionTime;
-                } else if (!isAnonymous) {
-                     // Üyeli kullanıcı kaydettiğinde deleteAfter alanı silinmeli
-                    delete data.deleteAfter;
-                }
-
-                await setDoc(docRef, data, { merge: true });
-                console.log(`Sohbet başarıyla kaydedildi/güncellendi. UID: ${uid}`);
-                return true;
-
-            } catch (error) {
-                console.error("Sohbet kaydedilirken hata:", error);
-                showModal("Veri Kayıt Hatası", `Sohbet geçmişi kaydedilemedi. Hata: ${error.message}`);
-                return false;
-            }
-        }
-        
-        // =========================================================================
-        // ANONİM OTURUM SÜRESİ YÖNETİMİ (5 Dk)
-        // =========================================================================
-
-        function startCountdown() {
-            if (countdownInterval) clearInterval(countdownInterval);
-            
-            const timerDisplay = document.getElementById('countdown-timer');
-            timerDisplay.classList.remove('hidden');
-
-            let timeLeft = ANON_TIMEOUT_MS;
-
-            function updateTimer() {
-                const minutes = Math.floor(timeLeft / 60000);
-                const seconds = Math.floor((timeLeft % 60000) / 1000);
-
-                timerDisplay.textContent = `Anonim Kalan Süre: ${minutes}:${seconds.toString().padStart(2, '0')}`;
-                
-                if (timeLeft <= 0) {
-                    clearInterval(countdownInterval);
-                    timerDisplay.textContent = 'SÜRE DOLDU! Lütfen kayıt olun.';
-                    updateUIVisibility(false, true); // Sohbeti kitle
-                    document.getElementById('auth-modal-open-btn').click(); // Modal'ı aç
-                }
-                
-                timeLeft -= 1000;
-            }
-
-            updateTimer(); 
-            countdownInterval = setInterval(updateTimer, 1000);
-        }
-
-        function stopCountdown() {
-            if (countdownInterval) clearInterval(countdownInterval);
-            document.getElementById('countdown-timer').classList.add('hidden');
-        }
-
-        // =========================================================================
-        // FIREBASE AUTH MANTIKLARI
-        // =========================================================================
-
-        async function handleSuccessfulAuth(user) {
-            currentUserId = user.uid;
-            isAnonymous = user.isAnonymous;
-            
-            // Firebase hatası mesajını gizle
-            document.getElementById('firebase-warning').classList.add('hidden');
-
-            const email = user.email || (user.isAnonymous ? "Anonim Kullanıcı" : "E-posta/Token Girişi");
-            const statusText = document.getElementById('auth-status');
-            statusText.innerHTML = `✅ **Giriş Başarılı.** ${user.isAnonymous ? 'Anonim Oturum' : 'Üyeli Oturum'} | Kullanıcı: <span class="font-bold">${email}</span>`;
-            
-            await loadChatHistory(currentUserId);
-            // Sadece auth hazır olduğunda UI'ı etkinleştir
-            updateUIVisibility(true, isAnonymous);
-            
-            if (isAnonymous) {
-                startCountdown();
-            } else {
-                stopCountdown();
-            }
-        }
-
-        document.getElementById('logout-btn').addEventListener('click', async () => {
-            if (!auth || !currentUserId) return;
-            
-            // Çıkış yapmadan önce mevcut sohbeti yedekle
-            await saveChatHistory(currentUserId, chatHistory, document.getElementById('instruction-textarea').value.trim());
-
+    authBtnEl.addEventListener('click', async () => {
+        if (auth.currentUser && auth.currentUser.isAnonymous === false) { // Üye ise çıkış yap
             try {
                 await signOut(auth);
-                showModal("Başarılı", "Başarıyla çıkış yaptınız. Sohbetiniz kaydedildi.");
+                closeAuthModal();
             } catch (error) {
-                console.error("Çıkış Hatası:", error);
-                showModal("Hata", `Çıkış yapılırken bir hata oluştu: ${error.message}`);
+                console.error("Çıkış yapma hatası:", error);
+                // Uyarı yerine modal/mesaj kutusu kullanılmalıdır, ancak ortamda basitlik için console'a yazıldı.
             }
-        });
+        } else { // Anonim ise veya hiç oturum yoksa modalı aç
+            openAuthModal();
+        }
+    });
 
-        // =========================================================================
-        // MODAL VE FORM İŞLEMLERİ (Giriş/Kayıt)
-        // =========================================================================
+    closeModalBtn.addEventListener('click', closeAuthModal);
+    modalLoginTab.addEventListener('click', showLoginForm);
+    modalRegisterTab.addEventListener('click', showRegisterForm);
 
-        // Modal Kapatma
-        document.getElementById('auth-modal-close-btn').addEventListener('click', () => {
-            document.getElementById('auth-modal').classList.add('hidden');
-        });
-        // Modal Açma
-        document.getElementById('auth-modal-open-btn').addEventListener('click', () => {
-            document.getElementById('auth-modal').classList.remove('hidden');
-        });
+    loginBtnEl.addEventListener('click', async () => {
+        loginErrorEl.classList.add('hidden');
+        const email = loginEmailEl.value.trim();
+        const password = loginPasswordEl.value.trim();
 
-        // Tab Değiştirme
-        document.getElementById('modal-login-tab').addEventListener('click', () => {
-            document.getElementById('login-form-content').classList.remove('hidden');
-            document.getElementById('register-form-content').classList.add('hidden');
-            document.getElementById('modal-login-tab').classList.replace('bg-gray-100', 'bg-blue-500');
-            document.getElementById('modal-login-tab').classList.replace('text-blue-600', 'text-white');
-            document.getElementById('modal-register-tab').classList.replace('bg-purple-500', 'bg-gray-100');
-            document.getElementById('modal-register-tab').classList.replace('text-white', 'text-blue-600');
-            document.getElementById('auth-modal-title').textContent = "Giriş Yap";
-        });
-        document.getElementById('modal-register-tab').addEventListener('click', () => {
-            document.getElementById('login-form-content').classList.add('hidden');
-            document.getElementById('register-form-content').classList.remove('hidden');
-            document.getElementById('modal-register-tab').classList.replace('bg-gray-100', 'bg-purple-500');
-            document.getElementById('modal-register-tab').classList.replace('text-blue-600', 'text-white');
-            document.getElementById('modal-login-tab').classList.replace('bg-blue-500', 'bg-gray-100');
-            document.getElementById('modal-login-tab').classList.replace('text-white', 'text-blue-600');
-            document.getElementById('auth-modal-title').textContent = "Kayıt Ol";
-        });
-
-        // Giriş Butonu İşlemi
-        document.getElementById('modal-login-btn').addEventListener('click', async () => {
-            const email = document.getElementById('login-email').value;
-            const password = document.getElementById('login-password').value;
-            const errorMsg = document.getElementById('login-error-message');
-            errorMsg.classList.add('hidden');
-
-            if (!email || password.length < 6) {
-                errorMsg.textContent = "Lütfen geçerli bir e-posta ve en az 6 karakterli şifre girin.";
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            try {
-                await signInWithEmailAndPassword(auth, email, password);
-                document.getElementById('auth-modal').classList.add('hidden');
-                showModal("Başarılı", "Giriş yapıldı! Sohbet geçmişiniz yüklendi.");
-                // onAuthStateChanged tetiklenecek ve yeni kullanıcıyı handle edecek
-            } catch (error) {
-                console.error("Giriş Hatası:", error);
-                errorMsg.textContent = `Giriş Hatası: ${error.message}`;
-                errorMsg.classList.remove('hidden');
-            }
-        });
-
-        // Kayıt Butonu İşlemi
-        document.getElementById('modal-register-btn').addEventListener('click', async () => {
-            const email = document.getElementById('register-email').value;
-            const password = document.getElementById('register-password').value;
-            const passwordConfirm = document.getElementById('register-password-confirm').value;
-            const errorMsg = document.getElementById('register-error-message');
-            errorMsg.classList.add('hidden');
-
-            if (password !== passwordConfirm) {
-                errorMsg.textContent = "Hatalı şifreler! Şifreleriniz eşleşmiyor.";
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            if (!email || password.length < 6) {
-                errorMsg.textContent = "Lütfen geçerli bir e-posta ve en az 6 karakterli şifre girin.";
-                errorMsg.classList.remove('hidden');
-                return;
-            }
-
-            // Kayıt olmadan önceki anonim geçmişi yedekle
-            const anonUserId = currentUserId; 
-            const anonHistory = [...chatHistory]; 
-            const anonInstruction = document.getElementById('instruction-textarea').value.trim();
-
-            try {
-                // Yeni kullanıcı oluştur (onAuthStateChanged tetiklenecek)
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                
-                // Anonim sohbeti yeni kullanıcıya yedekle (TRANSACTION kullanarak)
-                await runTransaction(db, async (transaction) => {
-                    const newChatRef = getChatRef(userCredential.user.uid);
-                    
-                    transaction.set(newChatRef, {
-                        historyJson: JSON.stringify(anonHistory), 
-                        systemInstruction: anonInstruction,
-                        lastUpdated: new Date(),
-                        isAnonymous: false,
-                        mergedFromAnonId: anonUserId // Hangi anonim ID'den geldiğini kaydet
-                    }, { merge: true });
-
-                    // Eski anonim kaydı silinmek üzere işaretle
-                    if (anonUserId) {
-                        const oldAnonRef = getChatRef(anonUserId);
-                        const deletionTime = new Date(Date.now() + 48 * 60 * 60 * 1000); 
-                        transaction.update(oldAnonRef, { 
-                            deleteAfter: deletionTime,
-                            isMerged: true
-                        });
-                    }
-                });
-
-                document.getElementById('auth-modal').classList.add('hidden');
-                showModal("Başarılı", "Kayıt başarılı! Anonim sohbetiniz hesabınıza yedeklendi.");
-            } catch (error) {
-                console.error("Kayıt Hatası:", error);
-                errorMsg.textContent = `Kayıt Hatası: ${error.message}`;
-                errorMsg.classList.remove('hidden');
-            }
-        });
-        
-        // =========================================================================
-        // SOHBET İŞLEMLERİ
-        // =========================================================================
-
-        document.getElementById('instruction-update-btn').addEventListener('click', async () => {
-            const instruction = document.getElementById('instruction-textarea').value.trim();
-            if (isAnonymous) {
-                document.getElementById('instruction-status').textContent = "Anonim kullanıcılar talimatı kaydedemez. Sadece yerel olarak kullanıldı.";
-                return;
-            }
-            if (instruction) {
-                const success = await saveChatHistory(currentUserId, chatHistory, instruction);
-                if(success) {
-                    document.getElementById('instruction-status').textContent = "✅ Talimat veritabanına kaydedildi.";
-                }
-            } else {
-                 document.getElementById('instruction-status').textContent = "⚠️ Talimat boş bırakılamaz.";
-            }
-        });
-
-        document.getElementById('clear-chat-btn').addEventListener('click', async () => {
-            if (!currentUserId) return;
-            
-            chatHistory = [];
-            renderChatHistory(chatHistory);
-            
-            // Veritabanından da sil
-            try {
-                const docRef = getChatRef(currentUserId);
-                await deleteDoc(docRef);
-                showModal("Başarılı", "Sohbet geçmişi hem yerel hem de veritabanından temizlendi.");
-            } catch (error) {
-                console.error("Sohbet silinirken hata:", error);
-                showModal("Hata", "Sohbet geçmişi veritabanından silinirken bir hata oluştu.");
-            }
-        });
-        
-        async function fetchWithRetry(url, options, maxRetries = 3) {
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (response.status === 429 && i < maxRetries - 1) {
-                        const delay = Math.pow(2, i) * 1000;
-                        await new Promise(resolve => setTimeout(resolve, delay));
-                        continue;
-                    }
-                    return response;
-                } catch (error) {
-                    if (i === maxRetries - 1) throw error;
-                    const delay = Math.pow(2, i) * 1000;
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                }
-            }
-            throw new Error("Tüm yeniden denemeler başarısız oldu.");
+        if (!email || !password) {
+            loginErrorEl.textContent = "E-posta ve şifre boş bırakılamaz.";
+            loginErrorEl.classList.remove('hidden');
+            return;
         }
 
+        try {
+            loginBtnEl.textContent = "Giriş Yapılıyor...";
+            loginBtnEl.disabled = true;
+            await signInWithEmailAndPassword(auth, email, password);
+            // Başarılı olursa onAuthStateChanged tetiklenir ve modal kapanır
+        } catch (error) {
+            console.error("Giriş hatası:", error);
+            loginErrorEl.textContent = "Giriş başarısız: " + error.message;
+            loginErrorEl.classList.remove('hidden');
+        } finally {
+             loginBtnEl.textContent = "Giriş Yap";
+             loginBtnEl.disabled = false;
+        }
+    });
 
-        async function callGemini(message) {
-            if (!isAuthReady) return; // Oturum hazır değilse API çağrısını engelle
+    registerBtnEl.addEventListener('click', async () => {
+        registerErrorEl.classList.add('hidden');
+        const email = registerEmailEl.value.trim();
+        const password = registerPasswordEl.value.trim();
+        const confirmPassword = registerPasswordConfirmEl.value.trim();
+
+        if (!email || !password || !confirmPassword) {
+            registerErrorEl.textContent = "Tüm alanlar doldurulmalıdır.";
+            registerErrorEl.classList.remove('hidden');
+            return;
+        }
+        if (password !== confirmPassword) {
+            registerErrorEl.textContent = "Şifreler eşleşmiyor.";
+            registerErrorEl.classList.remove('hidden');
+            return;
+        }
+        if (password.length < 6) {
+            registerErrorEl.textContent = "Şifre en az 6 karakter olmalıdır.";
+            registerErrorEl.classList.remove('hidden');
+            return;
+        }
+
+        try {
+            registerBtnEl.textContent = "Kayıt Olunuyor...";
+            registerBtnEl.disabled = true;
+            await createUserWithEmailAndPassword(auth, email, password);
+            // Başarılı olursa onAuthStateChanged tetiklenir ve modal kapanır
+        } catch (error) {
+            console.error("Kayıt olma hatası:", error);
+            registerErrorEl.textContent = "Kayıt başarısız: " + error.message;
+            registerErrorEl.classList.remove('hidden');
+        } finally {
+             registerBtnEl.textContent = "Kayıt Ol";
+             registerBtnEl.disabled = false;
+        }
+    });
+
+
+    onAuthStateChanged(auth, async (user) => {
+        if (unsubscribeFromChatHistory) {
+            unsubscribeFromChatHistory(); // Önceki dinleyiciyi kapat
+            unsubscribeFromChatHistory = null;
+        }
+
+        if (user) {
+            // Kullanıcının e-postası varsa üye oturumu, yoksa (isAnonymous true ise) anonim oturum.
+            const userEmail = user.isAnonymous ? 'Anonim Kullanıcı' : user.email || 'Kullanıcı ID: ' + user.uid.substring(0, 8) + '...';
+            userId = user.uid;
+            updateAuthUI(true, userEmail);
+            setChatReadyState(false); // Veri yüklenene kadar bekle
+            closeAuthModal(); // Oturum açıldıysa modalı kapat
+
+            await loadPrompt(); 
+            unsubscribeFromChatHistory = setupChatHistoryListener(); // Yeni dinleyiciyi başlat
             
-            if (!GEMINI_API_KEY) {
-                showModal("API Hatası", "Gemini API Anahtarı eksik. Mesaj gönderilemedi.");
-                return;
-            }
-
-
-            const loadingIndicator = document.getElementById('loading-indicator');
-            loadingIndicator.classList.remove('hidden');
-            document.getElementById('user-input').disabled = true;
-            document.getElementById('send-btn').disabled = true;
-
-            chatHistory.push({ role: "user", parts: [{ text: message }] });
-            renderChatHistory(chatHistory);
-
-            const systemInstruction = document.getElementById('instruction-textarea').value.trim() || DEFAULT_SYSTEM_INSTRUCTION;
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
-            
-            const contentsPayload = chatHistory.map(msg => ({
-                role: msg.role === 'user' ? 'user' : 'model',
-                parts: msg.parts
-            }));
-
-            const payload = {
-                contents: contentsPayload, 
-                // Google Search Grounding'i etkinleştir
-                tools: [{ "google_search": {} }], 
-                systemInstruction: {
-                    parts: [{ text: systemInstruction }]
-                }
-            };
+        } else {
+            // Çıkış yapıldı veya ilk kez yükleniyor.
+            userId = null;
+            updateAuthUI(false);
+            setChatReadyState(false);
             
             try {
-                const response = await fetchWithRetry(url, {
-                    method: 'POST',
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-
-                if (!response.ok) {
-                    const errorJson = await response.json();
-                    throw new Error(`API hatası: ${response.status}. Detay: ${errorJson.error?.message || response.statusText}`);
-                }
-
-                const result = await response.json();
-                const candidate = result?.candidates?.[0];
-                
-                if (candidate && candidate.content?.parts?.[0]?.text) {
-                    let responseText = candidate.content.parts[0].text;
-                    chatHistory.push({ role: "model", parts: [{ text: responseText }] });
-                    renderChatHistory(chatHistory);
-                    
-                    // Her başarılı yanıttan sonra sohbeti kaydet
-                    await saveChatHistory(currentUserId, chatHistory, systemInstruction, isAnonymous && chatHistory.length > 0); 
+                // Eğer Canvas ortamındaysa, özel token ile veya anonim giriş yap
+                if (initialAuthToken) {
+                    await signInWithCustomToken(auth, initialAuthToken);
                 } else {
-                    let reason = candidate?.finishReason || "Bilinmiyor";
-                    chatHistory.push({ role: "model", parts: [{ text: `Yanıt alınamadı. Bitiş Nedeni: ${reason}. Konsolu kontrol edin.` }] });
-                    renderChatHistory(chatHistory);
+                    await signInAnonymously(auth);
                 }
-
             } catch (error) {
-                console.error("Gemini API Çağrısı Başarısız:", error);
-                chatHistory.push({ role: "model", parts: [{ text: `Sunucu veya API hatası oluştu: ${error.message}` }] });
-                renderChatHistory(chatHistory);
-                showModal("API Hatası", "AI asistanından yanıt alınamadı. Konsolu kontrol edin.");
-            } finally {
-                loadingIndicator.classList.add('hidden');
-                document.getElementById('user-input').disabled = false;
-                document.getElementById('send-btn').disabled = false;
-                document.getElementById('user-input').focus();
+                console.error("Oturum açma hatası:", error);
+                authStatusEl.innerHTML = '<span class="text-red-500 font-bold">**GİRİŞ HATASI:** Oturum Açılamadı!</span>';
+                document.getElementById('initial-message').textContent = 'Oturum açılamadığı için sohbet devre dışı.';
+                setChatReadyState(false);
             }
         }
+    });
 
-        document.getElementById('send-btn').addEventListener('click', () => {
-            const input = document.getElementById('user-input');
-            const message = input.value.trim();
-            if (message) {
-                callGemini(message);
-                input.value = ''; 
-            }
-        });
+    // --- OLAY DİNLEYİCİLERİ ---
+    
+    chatFormEl.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const userText = userInputEl.value.trim();
 
-        document.getElementById('user-input').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('send-btn').click();
-            }
-        });
-
-
-        // =========================================================================
-        // UYGULAMA BAŞLANGICI
-        // =========================================================================
-        
-        function initFirebase() {
-            try {
-                app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-                
-                // setLogLevel('Debug');
-
-                onAuthStateChanged(auth, async (user) => {
-                    if (user) {
-                        await handleSuccessfulAuth(user);
-                    } else {
-                        // Kullanıcı yoksa Anonim Giriş yapmayı dene
-                        updateUIVisibility(false, true); 
-                        stopCountdown();
-                        currentUserId = null;
-                        
-                        // Eğer özel bir token varsa onu kullan
-                        if (__initial_auth_token) {
-                             signInWithCustomToken(auth, __initial_auth_token).catch(error => {
-                                console.error("Özel Token Giriş Hatası:", error);
-                                // Token başarısız olursa, hatayı göster ve kilitli kal
-                                updateUIVisibility(false, true, "Özel Token ile giriş başarısız oldu. API anahtarınız hatalı olabilir.");
-                            });
-                        } else {
-                            // Token yoksa anonim giriş yap
-                            signInAnonymously(auth).catch(error => {
-                                console.error("Anonim Giriş Hatası:", error);
-                                // Anonim giriş başarısız olursa, hatayı göster ve kilitli kal
-                                updateUIVisibility(false, true, "Anonim giriş başarısız oldu. Firebase Web API anahtarınız hatalı veya 'Anonim' kimlik doğrulama yöntemi kapalı.");
-                            });
-                        }
-                    }
-                });
-            } catch (error) {
-                console.error("Firebase başlatılırken hata:", error);
-                // Yapılandırma hatası durumunda UI'ı kilitli tut
-                updateUIVisibility(false, true, "Firebase yapılandırma objesi hatalı veya eksik.");
-            }
+        if (userText && !isAILoading && userId) {
+            userInputEl.value = ''; 
+            sendBtnEl.disabled = true; 
+            await generateContent(userText);
         }
-        
-        window.onload = initFirebase;
-    </script>
+    });
+
+    userInputEl.addEventListener('input', () => {
+        sendBtnEl.disabled = !isReadyToChat || isAILoading || userInputEl.value.trim() === '';
+    });
+
+    savePromptBtnEl.addEventListener('click', savePrompt);
+    clearChatBtnEl.addEventListener('click', clearChat);
+
+</script>
 </body>
 </html>
