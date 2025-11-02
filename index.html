@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Anonim AI Sohbet Asistanı</title>
+    <title>Anonim & Kullanıcı AI Sohbet Asistanı</title>
     <!-- Tailwind CSS Yüklemesi -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
@@ -12,18 +12,9 @@
             font-family: 'Inter', sans-serif;
             background-color: #f7f9fb;
         }
-        /* Custom scrollbar */
-        .custom-scrollbar::-webkit-scrollbar {
-            width: 8px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-            background-color: #cbd5e1;
-            border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-            background: #f1f1f1;
-        }
-        /* Sohbet geçmişi animasyonu */
+        .custom-scrollbar::-webkit-scrollbar { width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
         .chat-message {
             opacity: 0;
             transform: translateY(10px);
@@ -41,7 +32,7 @@
     
     <div class="max-w-6xl mx-auto bg-white shadow-xl rounded-xl p-4 sm:p-8 space-y-6">
         <header class="border-b pb-4 mb-4">
-            <h1 class="text-3xl font-extrabold text-gray-800">🤖 Anonim AI Asistanı</h1>
+            <h1 class="text-3xl font-extrabold text-gray-800">🤖 Anonim & Üyeli AI Asistanı</h1>
             <p id="auth-status" class="mt-1 text-sm text-gray-600">Oturum durumu yükleniyor...</p>
             <div id="api-warning" class="mt-2 text-sm p-2 bg-red-100 text-red-700 border border-red-300 rounded-lg hidden">
                 ⚠️ **UYARI:** **Gemini API Key** ayarlanmamış veya hatalı. AI çağrıları çalışmayacaktır.
@@ -54,16 +45,37 @@
         <!-- Ana Konteyner -->
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
-            <!-- Sol Panel: Sadece Ayarlar (Auth gizlendi) -->
+            <!-- Sol Panel: Auth ve Ayarlar -->
             <div class="lg:col-span-1 space-y-6">
                 
+                <!-- GİRİŞ / KAYIT BÖLÜMÜ -->
+                <div id="auth-section" class="space-y-3 p-4 border border-gray-200 rounded-lg shadow-sm">
+                    <h2 class="text-xl font-semibold text-gray-700">👤 Oturum Yönetimi</h2>
+                    
+                    <!-- Auth Formu -->
+                    <div id="auth-form">
+                        <input type="email" id="auth-email" placeholder="E-posta" class="w-full p-2 mb-2 border border-gray-300 rounded-md text-sm">
+                        <input type="password" id="auth-password" placeholder="Şifre (min 6 karakter)" class="w-full p-2 mb-3 border border-gray-300 rounded-md text-sm">
+                        
+                        <button id="login-btn" class="w-full px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700 transition duration-150 mb-2">Giriş Yap</button>
+                        <button id="register-btn" class="w-full px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition duration-150">Kayıt Ol</button>
+                    </div>
+
+                    <!-- Logout ve Bilgi -->
+                    <div id="logged-in-info" class="hidden space-y-2">
+                        <p class="text-sm font-medium text-gray-700">Giriş Yapılan Kullanıcı:</p>
+                        <p id="user-display-email" class="text-sm text-gray-500 font-bold break-words"></p>
+                        <button id="logout-btn" class="w-full px-4 py-2 text-white bg-red-500 rounded-lg hover:bg-red-600 transition duration-150">Çıkış Yap</button>
+                    </div>
+                </div>
+
                 <!-- SİSTEM TALİMATI BÖLÜMÜ -->
                 <div class="space-y-3 p-4 border border-gray-200 rounded-lg shadow-sm">
-                    <h2 class="text-xl font-semibold text-gray-700">⚙️ AI Talimatı (Anonim)</h2>
+                    <h2 class="text-xl font-semibold text-gray-700">⚙️ AI Talimatı</h2>
                     <textarea id="instruction-textarea" rows="4" class="w-full p-2 border border-gray-300 rounded-md focus:ring-purple-500 focus:border-purple-500 text-sm disabled:bg-gray-100" 
-                        placeholder="AI'ın nasıl davranması gerektiğini buraya yazın. (Örn: Kısa ve mizahi cevaplar ver.)" disabled></textarea>
+                        placeholder="AI'ın nasıl davranması gerektiğini buraya yazın." disabled></textarea>
                     <button id="instruction-update-btn" class="w-full px-4 py-2 text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition duration-150 disabled:bg-purple-300" disabled>Talimatı Güncelle & Kaydet</button>
-                    <p id="instruction-status" class="text-sm text-center text-gray-500">Anonim kullanıcılar talimatı sadece geçici olarak ayarlar.</p>
+                    <p id="instruction-status" class="text-sm text-center text-gray-500">Bu ayar sadece mevcut oturumunuz için geçerlidir.</p>
                 </div>
 
             </div>
@@ -76,18 +88,18 @@
                 <div id="chat-history" class="h-[450px] border border-gray-300 rounded-lg p-4 bg-gray-50 overflow-y-auto custom-scrollbar space-y-4">
                     <!-- Mesajlar buraya eklenecek -->
                     <div class="flex justify-center items-center h-full">
-                        <span class="text-gray-500">Anonim oturum başlatılıyor...</span>
+                        <span class="text-gray-500">Oturum açma bekleniyor...</span>
                     </div>
                 </div>
 
                 <!-- Giriş Alanı ve Düğme -->
                 <div class="flex space-x-3">
-                    <input type="text" id="user-input" placeholder="Mesajınızı buraya yazın..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100" disabled>
+                    <input type="text" id="user-input" placeholder="Lütfen oturum açılmasını bekleyin..." class="flex-grow p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100" disabled>
                     <button id="send-btn" class="px-6 py-3 text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition duration-150 disabled:bg-blue-300" disabled>Gönder</button>
                 </div>
                 
                 <div class="flex justify-between items-center text-sm">
-                    <button id="clear-chat-btn" class="text-red-500 hover:text-red-700 transition duration-150">Sohbeti Temizle (Geçici Hafıza)</button>
+                    <button id="clear-chat-btn" class="text-red-500 hover:text-red-700 transition duration-150" disabled>Sohbeti Temizle (Geçici Hafıza)</button>
                     <span id="loading-indicator" class="text-blue-500 hidden">Yükleniyor...</span>
                 </div>
             </div>
@@ -108,41 +120,36 @@
     <!-- Firebase Kütüphaneleri -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global Değişkenler
         let auth;
         let currentUserId = null;
-        let chatHistory = []; // Anonim kullanıcılar için geçici sohbet geçmişi
+        let chatHistory = []; // Geçici sohbet geçmişi
         const DEFAULT_SYSTEM_INSTRUCTION = "Sen yardımcı ve kibar bir yapay zeka asistanısın. Türkçe olarak yanıt ver. Yanıtlarını kibar ve samimi bir tonda tut.";
         
         // =========================================================================
-        // ZORUNLU YAPILANDIRMA (KULLANICI TARAFINDAN SAĞLANDI)
+        // ZORUNLU YAPILANDIRMA
         // =========================================================================
         
-        // 1. GEMINI API KEY (Kullanıcı tarafından sağlanan değer)
+        // Gemini API Key'iniz
         const GEMINI_API_KEY = "AIzaSyBdeqvxeHy_SrZYms2xxjUyohU8qPkg0u0"; 
 
-        // 2. FIREBASE CONFIG (Kullanıcı tarafından sağlanan görselden alındı)
+        // Firebase Config (Veriler önceki görsellerinizden alındı)
         const firebaseConfig = {
-            apiKey: "AIzaSyBmtVU_ceKdSXfjVmrUPYeH1L9pDw5vdc", // <<< Firebase Web API Key
+            apiKey: "AIzaSyBmtVU_ceKdSXfjVmrUPYeH1L9pDw5vdc",
             authDomain: "digit-ai-lab.firebaseapp.com",
-            projectId: "digit-ai-lab", // <<< Project ID
+            projectId: "digit-ai-lab",
             storageBucket: "digit-ai-lab.appspot.com",
-            messagingSenderId: "SENDER_ID_HERE", // Varsayılan değer
-            appId: "APP_ID_HERE" // Varsayılan değer
+            messagingSenderId: "SENDER_ID_HERE", 
+            appId: "APP_ID_HERE" 
         };
         
         // =========================================================================
         // YARDIMCI FONKSİYONLAR
         // =========================================================================
 
-        /**
-         * Custom Modal (Alert yerine)
-         * @param {string} title 
-         * @param {string} content 
-         */
         function showModal(title, content) {
             document.getElementById('modal-title').textContent = title;
             document.getElementById('modal-content').textContent = content;
@@ -153,16 +160,12 @@
             document.getElementById('custom-modal').classList.add('hidden');
         });
 
-        /**
-         * Gemini API formatını HTML formatına dönüştürür.
-         * @param {Array<Object>} history 
-         */
         function renderChatHistory(history) {
             const chatDiv = document.getElementById('chat-history');
-            chatDiv.innerHTML = ''; // Önceki içeriği temizle
+            chatDiv.innerHTML = ''; 
 
             if (history.length === 0) {
-                chatDiv.innerHTML = '<div class="flex justify-center items-center h-full"><span class="text-gray-500">Anonim oturum başlatıldı. İlk mesajınızı yazın!</span></div>';
+                chatDiv.innerHTML = '<div class="flex justify-center items-center h-full"><span class="text-gray-500">Oturum açıldı. İlk mesajınızı yazın!</span></div>';
                 return;
             }
 
@@ -170,9 +173,8 @@
                 const isUser = msg.role === 'user';
                 let text = msg.parts[0].text;
                 
-                // Markdown'ı temel HTML'e çevir (basit bir yaklaşım)
-                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // Kalın
-                           .replace(/\n/g, '<br>'); // Yeni satırlar
+                text = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') 
+                           .replace(/\n/g, '<br>'); 
 
                 const messageHtml = `
                     <div class="flex ${isUser ? 'justify-end' : 'justify-start'} chat-message" style="animation-delay: ${index * 0.05}s;">
@@ -186,78 +188,168 @@
                 chatDiv.insertAdjacentHTML('beforeend', messageHtml);
             });
 
-
-            // En alta kaydır
             chatDiv.scrollTop = chatDiv.scrollHeight;
         }
 
         /**
-         * UI elemanlarının aktif/pasif durumunu günceller
-         * @param {boolean} isReady - Arayüzün aktif olup olmayacağını belirtir (Auth başarılıysa true)
+         * Sohbet ve Talimat UI elemanlarının aktif/pasif durumunu günceller
+         * @param {boolean} isReady - Sohbet alanının aktif olup olmayacağını belirtir
          */
         function updateUIVisibility(isReady = false) {
             const userInput = document.getElementById('user-input');
             const sendBtn = document.getElementById('send-btn');
             const instructionTextarea = document.getElementById('instruction-textarea');
             const instructionUpdateBtn = document.getElementById('instruction-update-btn');
+            const clearChatBtn = document.getElementById('clear-chat-btn');
             const apiWarning = document.getElementById('api-warning');
             
-            // API Anahtarı Kontrolü (Hata Düzeltme)
-            // Eğer anahtar boşsa veya varsayılan bir placeholder ise uyarı göster ve kitle.
-            const isApiKeyValid = GEMINI_API_KEY && GEMINI_API_KEY.length > 10 && GEMINI_API_KEY !== "AIzaSyBdeqvxeHy_SrZYms2xxjUyohU8qPkg0u0";
+            const isApiKeyValid = GEMINI_API_KEY && GEMINI_API_KEY.length > 10;
             
             if (!isApiKeyValid) {
                 apiWarning.classList.remove('hidden');
-                isReady = false; // API anahtarı yoksa hazır değil
+                isReady = false; 
             } else {
                 apiWarning.classList.add('hidden');
             }
 
-            // UI'ı sadece hazır ve API anahtarı geçerliyse aktif et
+            // Sohbet ve Talimat UI'ı sadece hazır ve API anahtarı geçerliyse aktif et
             userInput.disabled = !isReady;
             sendBtn.disabled = !isReady;
             instructionTextarea.disabled = !isReady;
             instructionUpdateBtn.disabled = !isReady;
+            clearChatBtn.disabled = !isReady;
 
             if (!isReady) {
-                userInput.placeholder = "Giriş yapılıyor veya API Anahtarı bekleniyor...";
+                userInput.placeholder = "Oturum açma bekleniyor...";
             } else {
                 userInput.placeholder = "Mesajınızı buraya yazın...";
             }
         }
+        
+        /**
+         * Auth UI (Giriş Formu vs. Çıkış Butonu) görünürlüğünü günceller
+         * @param {Object|null} user - Firebase User objesi
+         */
+        function updateAuthUI(user) {
+            const authForm = document.getElementById('auth-form');
+            const loggedInInfo = document.getElementById('logged-in-info');
+            const userDisplayEmail = document.getElementById('user-display-email');
+            
+            if (user) {
+                // Giriş yapılmışsa
+                authForm.classList.add('hidden');
+                loggedInInfo.classList.remove('hidden');
+                
+                const displayInfo = user.email || (user.isAnonymous ? "Anonim Kullanıcı" : `UID: ${user.uid.substring(0, 8)}...`);
+                userDisplayEmail.textContent = displayInfo;
 
+            } else {
+                // Çıkış yapılmışsa
+                authForm.classList.remove('hidden');
+                loggedInInfo.classList.add('hidden');
+            }
+        }
 
         // =========================================================================
-        // FIREBASE İŞLEMLERİ (SADECE ANONİM GİRİŞ İÇİN)
+        // FIREBASE İŞLEMLERİ (AUTH MANTIKLARI)
         // =========================================================================
 
         /**
-         * Firebase'i başlatır ve anonim kimlik doğrulamasını yapar.
+         * Kullanıcı Girişi
+         */
+        async function handleLogin() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+
+            if (!email || password.length < 6) {
+                showModal("Hata", "Lütfen geçerli bir e-posta ve en az 6 karakterli bir şifre girin.");
+                return;
+            }
+
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+                showModal("Başarılı", "Giriş yapıldı!");
+            } catch (error) {
+                console.error("Giriş Hatası:", error);
+                showModal("Giriş Hatası", `Giriş yapılırken bir hata oluştu: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Kullanıcı Kaydı
+         */
+        async function handleRegister() {
+            const email = document.getElementById('auth-email').value;
+            const password = document.getElementById('auth-password').value;
+            
+            if (!email || password.length < 6) {
+                showModal("Hata", "Lütfen geçerli bir e-posta ve en az 6 karakterli bir şifre girin.");
+                return;
+            }
+
+            try {
+                await createUserWithEmailAndPassword(auth, email, password);
+                showModal("Başarılı", "Kayıt başarılı! Oturumunuz açıldı.");
+            } catch (error) {
+                console.error("Kayıt Hatası:", error);
+                showModal("Kayıt Hatası", `Kayıt yapılırken bir hata oluştu: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Çıkış Yap
+         */
+        async function handleLogout() {
+            try {
+                await signOut(auth);
+                chatHistory = []; // Sohbet geçmişini temizle
+                renderChatHistory(chatHistory);
+                showModal("Başarılı", "Başarıyla çıkış yaptınız.");
+            } catch (error) {
+                console.error("Çıkış Hatası:", error);
+                showModal("Hata", `Çıkış yapılırken bir hata oluştu: ${error.message}`);
+            }
+        }
+
+
+        /**
+         * Firebase'i başlatır ve kimlik doğrulama durumunu izler.
          */
         function initFirebase() {
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 
-                // Kimlik doğrulama durumundaki değişiklikleri izle
+                // Event Listener'ları kur
+                document.getElementById('login-btn').addEventListener('click', handleLogin);
+                document.getElementById('register-btn').addEventListener('click', handleRegister);
+                document.getElementById('logout-btn').addEventListener('click', handleLogout);
+
                 onAuthStateChanged(auth, async (user) => {
                     const statusText = document.getElementById('auth-status');
                     
                     if (user) {
+                        // KULLANICI GİRİŞ YAPMIŞ
                         currentUserId = user.uid;
-                        statusText.innerHTML = `✅ **Anonim Giriş Başarılı.** Kullanıcı: ANONYMOUS | UID: \`${user.uid.substring(0, 8)}...\``;
+                        statusText.innerHTML = `✅ **Oturum Açık.** Kullanıcı: <span class="font-bold">${user.email || 'Anonim'}</span> | UID: \`${user.uid.substring(0, 8)}...\``;
                         document.getElementById('instruction-textarea').value = DEFAULT_SYSTEM_INSTRUCTION;
                         
-                        // Auth başarılı, UI'ı aktif etme çağrısı
                         updateUIVisibility(true); 
+                        updateAuthUI(user);
                         
-                        renderChatHistory(chatHistory); // Başlangıç mesajını göster
+                        if (chatHistory.length === 0) {
+                             renderChatHistory(chatHistory); // İlk mesajı göster
+                        }
+                       
                     } else {
-                        // Kullanıcı yoksa anonim giriş yap
-                        statusText.textContent = "Anonim olarak giriş yapılıyor...";
-                        
+                        // KULLANICI ÇIKIŞ YAPMIŞ VEYA YENİ GİRİYOR
+                        statusText.textContent = "Oturum açma bekleniyor...";
+                        updateUIVisibility(false); 
+                        updateAuthUI(null);
+
+                        // Canvas ortamı için zorunlu otomatik giriş (Anonim/Token)
                         if (typeof __initial_auth_token !== 'undefined') {
-                             // Canvas ortamında otomatik giriş
+                             // Custom token ile oturum açmaya zorla
                              await signInWithCustomToken(auth, __initial_auth_token);
                         } else {
                             // Token yoksa anonim giriş yap
@@ -265,7 +357,6 @@
                                 console.error("Anonim Giriş Hatası:", error);
                                 document.getElementById('auth-status').innerHTML = `<span class="text-red-600 font-bold">❌ GİRİŞ HATASI: ${error.message}</span>`;
                                 document.getElementById('firebase-warning').classList.remove('hidden');
-                                updateUIVisibility(false); 
                             });
                         }
                     }
@@ -282,7 +373,6 @@
         // SOHBET İŞLEMLERİ VE GEMINI API
         // =========================================================================
         
-        // Talimat güncelleme artık sadece yerel olarak çalışacak (sayfa yenilenince sıfırlanır)
         document.getElementById('instruction-update-btn').addEventListener('click', async () => {
             const instruction = document.getElementById('instruction-textarea').value.trim();
             if (instruction) {
@@ -292,7 +382,6 @@
             }
         });
 
-        // Sohbeti Temizle düğmesi artık sadece yerel chatHistory'i sıfırlar
         document.getElementById('clear-chat-btn').addEventListener('click', async () => {
             chatHistory = [];
             renderChatHistory(chatHistory);
@@ -324,18 +413,15 @@
 
         /**
          * Gemini API çağrısını gerçekleştirir.
-         * @param {string} message 
          */
         async function callGemini(message) {
             const loadingIndicator = document.getElementById('loading-indicator');
             
-            // UI kitle
             loadingIndicator.classList.remove('hidden');
-            // Kullanıcının UI'ı kilitlenmiş gibi görmesini engellemek için, sadece input'u kitle
             document.getElementById('user-input').disabled = true;
             document.getElementById('send-btn').disabled = true;
 
-            // Yeni kullanıcı mesajını geçici geçmişe ekle ve hemen render et
+            // Yeni kullanıcı mesajını ekle
             chatHistory.push({ role: "user", parts: [{ text: message }] });
             renderChatHistory(chatHistory);
 
@@ -343,7 +429,6 @@
 
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`;
             
-            // Sohbet geçmişini API'ye uygun hale getir
             const contentsPayload = chatHistory.map(msg => ({
                 role: msg.role === 'user' ? 'user' : 'model',
                 parts: msg.parts
@@ -367,7 +452,6 @@
                 });
 
                 if (!response.ok) {
-                    // API hata mesajını detaylı göstermeye çalış
                     const errorJson = await response.json();
                     throw new Error(`API hatası: ${response.status}. Detay: ${errorJson.error?.message || response.statusText}`);
                 }
@@ -385,20 +469,16 @@
                         grounding.forEach((attr, index) => {
                             const uri = attr.web?.uri || '#';
                             const title = attr.web?.title || 'Bilinmeyen Başlık';
-                            // Kaynakları listele ve bağlantı ver
                             sources += `${index + 1}. <a href="${uri}" target="_blank" class="text-xs text-blue-300 hover:text-blue-100">${title}</a><br>`;
                         });
                         responseText += sources;
                     }
 
-                    // AI yanıtını geçici geçmişe ekle
+                    // AI yanıtını geçmişe ekle
                     chatHistory.push({ role: "model", parts: [{ text: responseText }] });
-                    
-                    // Yeni geçmişi render et
                     renderChatHistory(chatHistory);
 
                 } else {
-                    // Yanıt yoksa veya engellenmişse
                     let reason = candidate?.finishReason || "Bilinmiyor";
                     let safety = candidate?.safetyRatings?.[0]?.probability || "Yok";
                     
@@ -409,17 +489,15 @@
             } catch (error) {
                 console.error("Gemini API Çağrısı Başarısız:", error);
                 
-                // Hata mesajını sohbete ekle
                 chatHistory.push({ role: "model", parts: [{ text: `Sunucu veya API hatası oluştu: ${error.message}` }] });
                 renderChatHistory(chatHistory);
 
                 showModal("API Hatası", "AI asistanından yanıt alınamadı. Konsolu kontrol edin veya API anahtarınızın doğru olduğundan emin olun.");
             } finally {
-                // UI kilidini kaldır ve temizle
                 loadingIndicator.classList.add('hidden');
-                // Sadece input'ları geri aç
                 document.getElementById('user-input').disabled = false;
                 document.getElementById('send-btn').disabled = false;
+                document.getElementById('user-input').focus();
             }
         }
 
